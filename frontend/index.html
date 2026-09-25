@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAJ | Premium Banking</title>
+    <!-- Inter Font for ultra-clean, Apple/Stripe-like typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Boxicons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- === AUTHENTICATION LAYOUT === -->
+    <div id="auth-layout" class="layout active">
+        <div class="auth-wrapper">
+            
+            <!-- Login View -->
+            <section id="login-view" class="view active">
+                <div class="auth-card">
+                    <div class="brand-logo-large">
+                        <div class="logo-box">R</div>
+                        <h2>RAJ</h2>
+                    </div>
+                    <p class="auth-subtitle">Sign in to your premium account.</p>
+                    
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label>Account Number</label>
+                            <input type="text" id="login-username" placeholder="e.g. 1001" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" placeholder="••••••••" required>
+                        </div>
+                        <div id="login-error" class="error-msg hidden"><i class='bx bx-error-circle'></i> Incorrect credentials.</div>
+                        <button type="submit" class="btn btn-primary w-100 mt-2">Sign In</button>
+                    </form>
+                    <div class="auth-footer">
+                        <p>Don't have an account? <a href="#" onclick="switchView('register-view')">Open an account</a></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Register View -->
+            <section id="register-view" class="view hidden">
+                <div class="auth-card register-card">
+                    <div class="brand-logo-large">
+                        <div class="logo-box">R</div>
+                        <h2>RAJ</h2>
+                    </div>
+                    <p class="auth-subtitle">Experience the best in banking.</p>
+                    
+                    <form id="register-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="reg-name" placeholder="John Doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="reg-email" placeholder="john@example.com" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" id="reg-password" placeholder="••••••••" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm Password</label>
+                                <input type="password" id="reg-confirm" placeholder="••••••••" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Initial Deposit (₹)</label>
+                            <input type="number" id="reg-deposit" min="0" step="0.01" placeholder="5000" required>
+                        </div>
+                        <div id="reg-error" class="error-msg hidden"><i class='bx bx-error-circle'></i> Passwords do not match</div>
+                        <button type="submit" class="btn btn-primary w-100 mt-2">Create Account</button>
+                    </form>
+                    <div class="auth-footer">
+                        <p>Already a member? <a href="#" onclick="switchView('login-view')">Sign In</a></p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- === DASHBOARD LAYOUT === -->
+    <div id="main-layout" class="layout hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo-box-small">R</div>
+                <span>RAJ</span>
+            </div>
+            
+            <ul class="side-menu">
+                <li class="active" data-target="dashboard-view"><i class='bx bx-home-alt'></i><span>Overview</span></li>
+                <li data-target="transfer-view"><i class='bx bx-transfer'></i><span>Transfers</span></li>
+                <li data-target="cards-view"><i class='bx bx-credit-card'></i><span>Cards</span></li>
+                <li data-target="deposits-view"><i class='bx bx-layer'></i><span>Deposits (FD)</span></li>
+                <li data-target="loans-view"><i class='bx bx-briefcase'></i><span>Loans</span></li>
+                <li data-target="transactions-view"><i class='bx bx-list-ul'></i><span>Transactions</span></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn-logout">
+                    <i class='bx bx-log-out'></i><span>Sign Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <header class="top-header">
+                <div class="header-search">
+                    <i class='bx bx-search'></i>
+                    <input type="text" placeholder="Search transactions, payees...">
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn"><i class='bx bx-bell'></i></button>
+                    <div class="user-profile">
+                        <div class="avatar"><i class='bx bx-user'></i></div>
+                        <div class="user-info">
+                            <span class="user-name" id="header-name">User</span>
+                            <span class="user-acc" id="header-acc">Account</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 1. Overview / Dashboard -->
+            <section id="dashboard-view" class="main-view active">
+                <div class="view-title">
+                    <h1 id="welcome-msg">Good morning.</h1>
+                    <p id="current-date">Overview of your finances</p>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <!-- Main Balance -->
+                    <div class="panel balance-panel bg-black text-white">
+                        <div class="panel-head">Total Balance</div>
+                        <h1 class="balance-amount" id="dash-balance">₹0.00</h1>
+                        <div class="balance-foot">
+                            <span><i class='bx bx-trending-up'></i> +12.5% this month</span>
+                            <button class="btn btn-white-sm" onclick="switchMainView('transfer-view')">Send Money</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="panel quick-stats">
+                        <div class="stat-box">
+                            <div class="stat-icon bg-blue-light"><i class='bx bx-down-arrow-alt text-blue'></i></div>
+                            <div class="stat-details">
+                                <p>Income</p>
+                                <h4>₹45,200.00</h4>
+                            </div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-icon bg-red-light"><i class='bx bx-up-arrow-alt text-red'></i></div>
+                            <div class="stat-details">
+                                <p>Expenses</p>
+                                <h4>₹12,450.00</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-transactions-preview panel mt-4">
+                    <div class="panel-header-flex">
+                        <h3>Recent Activity</h3>
+                        <a href="#" onclick="switchMainView('transactions-view')">View All</a>
+                    </div>
+                    <table class="clean-table" id="recent-txn-table">
+                        <!-- JS Injected -->
+                    </table>
+                </div>
+            </section>
+
+            <!-- 2. Transfer Funds -->
+            <section id="transfer-view" class="main-view hidden">
+                <div class="view-title">
+                    <h1>Transfer Funds</h1>
+                    <p>Send money to any RAJ bank account instantly.</p>
+                </div>
+                <div class="grid-2">
+                    <div class="panel">
+                        <h3 class="mb-4">Transfer Details</h3>
+                        <form id="transfer-form">
+                            <div class="form-group">
+                                <label>Payee Account Number</label>
+                                <input type="text" id="transfer-payee" placeholder="e.g. 1002" required autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₹)</label>
+                                <div class="input-prefix">
+                                    <span>₹</span>
+                                    <input type="number" id="transfer-amount" min="1" step="0.01" placeholder="1000" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Remarks / Note (Optional)</label>
+                                <input type="text" id="transfer-remarks" placeholder="What's this for?">
+                            </div>
+                            <div class="form-group">
+                                <label>Security PIN</label>
+                                <input type="password" id="transfer-pin" required placeholder="Enter your 4-6 digit PIN">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mt-2">Secure Transfer</button>
+                        </form>
+                    </div>
+
+                    <!-- Right Column: Info Guidelines -->
+                    <div class="panel bg-blue-light" style="border: none;">
+                        <h3 class="text-blue mb-4"><i class='bx bx-info-circle'></i> Transfer Guidelines</h3>
+                        <ul class="settings-list" style="background: transparent;">
+                            <li style="border-bottom-color: rgba(37,99,235,0.15); padding-top: 0;">
+                                <div class="setting-info">
+                                    <i class='bx bx-stopwatch text-blue' style="background: rgba(255,255,255,0.6);"></i>
+                                    <div>
+                                        <strong class="text-blue">Instant Processing</strong>
+                                        <p class="text-blue" style="opacity: 0.85">IMPS transfers process in under 10 seconds.</p>
+                                    </div>
+                                </div>
+                            </li>
+                            <li style="border-bottom-color: rgba(37,99,235,0.15);">
+                                <div class="setting-info">
+                                    <i class='bx bx-shield-quarter text-blue' style="background: rgba(255,255,255,0.6);"></i>
+                                    <div>
+                                        <strong class="text-blue">Secure Transaction</strong>
+                                        <p class="text-blue" style="opacity: 0.85">256-bit end-to-end encryption active.</p>
+                                    </div>
+                                </div>
+                            </li>
+                            <li style="border-bottom: none;">
+                                <div class="setting-info">
+                                    <i class='bx bx-slider text-blue' style="background: rgba(255,255,255,0.6);"></i>
+                                    <div>
+                                        <strong class="text-blue">Daily Limits</strong>
+                                        <p class="text-blue" style="opacity: 0.85">Max ₹5,00,000 per day without OTP.</p>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Cards Management -->
+            <section id="cards-view" class="main-view hidden">
+                <div class="view-title">
+                    <h1>Your Cards</h1>
+                    <p>Manage your debit and credit cards.</p>
+                </div>
+                <div class="grid-2">
+                    <!-- Card Visual -->
+                    <div class="panel center-content">
+                        <div class="credit-card black-card">
+                            <div class="card-top">
+                                <i class='bx bx-chip chip-icon'></i>
+                                <i class='bx bx-wifi wifi-icon'></i>
+                            </div>
+                            <div class="card-number">•••• •••• •••• <span id="card-last-4">4281</span></div>
+                            <div class="card-bottom">
+                                <div class="card-holder" id="card-name-display">JOHN DOE</div>
+                                <div class="card-expiry">12/28</div>
+                                <div class="card-logo">RAJ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card Controls -->
+                    <div class="panel">
+                        <h3>Card Settings</h3>
+                        <ul class="settings-list mt-3">
+                            <li>
+                                <div class="setting-info">
+                                    <i class='bx bx-lock-alt'></i>
+                                    <div>
+                                        <strong>Freeze Card</strong>
+                                        <p>Temporarily disable this card</p>
+                                    </div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="freeze-toggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </li>
+                            <li>
+                                <div class="setting-info">
+                                    <i class='bx bx-globe'></i>
+                                    <div>
+                                        <strong>International Usage</strong>
+                                        <p>Enable for foreign transactions</p>
+                                    </div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </li>
+                            <li>
+                                <div class="setting-info">
+                                    <i class='bx bx-slider'></i>
+                                    <div>
+                                        <strong>Set Transaction Limit</strong>
+                                        <p>Current limit: ₹50,000 / day</p>
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline-sm" onclick="showToast('Limit settings sent to your registered email.')">Change</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Fixed Deposits -->
+            <section id="deposits-view" class="main-view hidden">
+                <div class="view-title">
+                    <h1>Fixed Deposits</h1>
+                    <p>Grow your wealth with high-interest FDs.</p>
+                </div>
+                <div class="grid-2">
+                    <div class="panel">
+                        <h3>Open New FD</h3>
+                        <form id="fd-form" class="mt-3">
+                            <div class="form-group">
+                                <label>Deposit Amount (₹)</label>
+                                <input type="number" id="fd-amount" min="5000" placeholder="Min. ₹5,000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Tenure</label>
+                                <select id="fd-tenure" required class="select-input">
+                                    <option value="6">6 Months (5.5% p.a.)</option>
+                                    <option value="12">1 Year (6.5% p.a.)</option>
+                                    <option value="24">2 Years (7.1% p.a.)</option>
+                                </select>
+                            </div>
+                            <div class="info-box bg-blue-light text-blue mt-2">
+                                <i class='bx bx-info-circle'></i> Interest will be credited at maturity.
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mt-3">Invest Now</button>
+                        </form>
+                    </div>
+                    <div class="panel">
+                        <h3>Active Deposits</h3>
+                        <div id="fd-list" class="mt-3">
+                            <!-- JS Injected -->
+                            <div class="empty-state text-center text-muted mt-4">
+                                <i class='bx bx-layer' style="font-size: 3rem; opacity: 0.5;"></i>
+                                <p class="mt-2">No active fixed deposits.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Loans -->
+            <section id="loans-view" class="main-view hidden">
+                <div class="view-title">
+                    <h1>Loans & Credit</h1>
+                    <p>Instant financing tailored for you.</p>
+                </div>
+                <div class="grid-3">
+                    <div class="panel loan-offer">
+                        <div class="loan-icon bg-blue-light text-blue"><i class='bx bx-car'></i></div>
+                        <h3>Auto Loan</h3>
+                        <h2 class="mt-1">₹8,00,000</h2>
+                        <p class="text-muted text-sm mb-3">Pre-approved • 8.5% p.a.</p>
+                        <button class="btn btn-outline w-100" onclick="applyLoan('Auto Loan', 800000)">Apply Now</button>
+                    </div>
+                    <div class="panel loan-offer bg-black text-white">
+                        <div class="loan-icon bg-gray-dark text-white"><i class='bx bx-user'></i></div>
+                        <h3>Personal Loan</h3>
+                        <h2 class="mt-1">₹5,00,000</h2>
+                        <p class="text-gray-light text-sm mb-3">Pre-approved • 10.5% p.a.</p>
+                        <button class="btn btn-white w-100" onclick="applyLoan('Personal Loan', 500000)">Claim Offer</button>
+                    </div>
+                    <div class="panel loan-offer">
+                        <div class="loan-icon bg-blue-light text-blue"><i class='bx bx-home-heart'></i></div>
+                        <h3>Home Loan</h3>
+                        <h2 class="mt-1">Up to ₹1 Cr</h2>
+                        <p class="text-muted text-sm mb-3">Check Eligibility • 7.2% p.a.</p>
+                        <button class="btn btn-outline w-100" onclick="showToast('Eligibility check link sent to SMS.')">Check Now</button>
+                    </div>
+                </div>
+                <div class="panel mt-4">
+                    <h3>Active Loans</h3>
+                    <div id="active-loans-list" class="mt-3">
+                        <div class="empty-state text-center text-muted">
+                            <p>You have no active loans.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Transactions List -->
+            <section id="transactions-view" class="main-view hidden">
+                <div class="view-title flex-header">
+                    <div>
+                        <h1>Transaction History</h1>
+                        <p>Detailed view of your ledger.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="renderTransactions()"><i class='bx bx-refresh'></i> Refresh</button>
+                </div>
+                <div class="panel">
+                    <div class="table-responsive">
+                        <table class="clean-table full-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Reference Number</th>
+                                    <th class="text-right">Amount</th>
+                                    <th class="text-right">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-tbody">
+                                <!-- JS Injected -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
