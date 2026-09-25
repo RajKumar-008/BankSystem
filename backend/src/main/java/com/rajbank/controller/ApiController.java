@@ -29,17 +29,22 @@ public class ApiController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        String accNo = credentials.get("accountNumber");
+        String loginIdentifier = credentials.get("accountNumber"); // This will now hold either email or acc no
         String pass = credentials.get("password");
         
-        Optional<Account> accOpt = accountRepository.findById(accNo);
+        Optional<Account> accOpt;
+        if (loginIdentifier.contains("@")) {
+            accOpt = accountRepository.findByEmail(loginIdentifier);
+        } else {
+            accOpt = accountRepository.findById(loginIdentifier);
+        }
         
         if(accOpt.isPresent() && accOpt.get().getPassword().equals(pass)) {
             // Success
             return ResponseEntity.ok(accOpt.get());
         }
         
-        return ResponseEntity.status(401).body(Map.of("error", "Invalid Account Number or Password"));
+        return ResponseEntity.status(401).body(Map.of("error", "Invalid Account Details or Password"));
     }
 
     @PostMapping("/transfer")
