@@ -104,6 +104,22 @@ function showToast(message) {
 }
 
 // --- Auth logic ---
+document.querySelectorAll('input[name="loginType"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        const label = document.getElementById('login-input-label');
+        const input = document.getElementById('login-username');
+        if (e.target.value === 'gmail') {
+            label.textContent = 'Gmail Address';
+            input.placeholder = 'you@gmail.com';
+            input.type = 'email';
+        } else {
+            label.textContent = 'Account Number';
+            input.placeholder = 'e.g. 1001';
+            input.type = 'text';
+        }
+    });
+});
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('login-username').value.trim();
