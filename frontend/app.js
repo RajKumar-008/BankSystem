@@ -104,29 +104,49 @@ function showToast(message) {
 }
 
 // --- Auth logic ---
-document.getElementById('login-form').addEventListener('submit', (e) => {
+document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
     const errorMsg = document.getElementById('login-error');
 
-    const user = mockUsers[username];
-    if (user && user.password === password) {
-        currentUser = user;
-        errorMsg.classList.add('hidden');
-        document.getElementById('login-form').reset();
+    try {
+        const response = await fetch('https://banksystem-rtrs.onrender.com/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountNumber: username, password: password })
+        });
         
-        // Setup Header
-        document.getElementById('header-name').textContent = currentUser.name.split(' ')[0];
-        document.getElementById('header-acc').textContent = `Acc: ${currentUser.accountNo}`;
-        
-        toggleLayouts(true);
-    } else {
-        errorMsg.classList.remove('hidden');
+        if (response.ok) {
+            const data = await response.json();
+            currentUser = {
+                name: data.name,
+                email: data.email,
+                password: data.password,
+                accountNo: data.accountNumber,
+                balance: data.balance,
+                transactions: [], 
+                fds: [],
+                loans: []
+            };
+            errorMsg.classList.add('hidden');
+            document.getElementById('login-form').reset();
+            
+            // Setup Header
+            document.getElementById('header-name').textContent = currentUser.name.split(' ')[0];
+            document.getElementById('header-acc').textContent = `Acc: ${currentUser.accountNo}`;
+            
+            toggleLayouts(true);
+        } else {
+            errorMsg.classList.remove('hidden');
+        }
+    } catch (error) {
+        alert("Error connecting to live server!");
+        console.error(error);
     }
 });
 
-document.getElementById('register-form').addEventListener('submit', (e) => {
+document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('reg-name').value.trim();
     const email = document.getElementById('reg-email').value.trim();
@@ -138,17 +158,34 @@ document.getElementById('register-form').addEventListener('submit', (e) => {
     if (password !== confirm) { errorMsg.classList.remove('hidden'); return; }
     if (deposit < 0) return;
 
-    const newAccountNo = (Object.keys(mockUsers).length + 1001).toString();
-    mockUsers[newAccountNo] = {
-        name, email, password, accountNo: newAccountNo, balance: deposit,
-        transactions: [{ date: new Date().toISOString(), ref: generateRef(), type: 'Credit', amount: deposit, closingBalance: deposit, desc: 'Initial Deposit' }],
-        fds: [], loans: []
-    };
+    const newAccountNo = (Math.floor(Math.random() * 9000) + 1000).toString(); // Generate 4-digit ID
 
-    alert(`Account created successfully.\nYour Account Number is: ${newAccountNo}`);
-    errorMsg.classList.add('hidden');
-    document.getElementById('register-form').reset();
-    switchView('login-view');
+    try {
+        const response = await fetch('https://banksystem-rtrs.onrender.com/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                accountNumber: newAccountNo,
+                name: name,
+                email: email,
+                password: password,
+                balance: deposit
+            })
+        });
+
+        if (response.ok) {
+            alert(`Account created in Cloud Database!\nYour Account Number is: ${newAccountNo}`);
+            errorMsg.classList.add('hidden');
+            document.getElementById('register-form').reset();
+            switchView('login-view');
+        } else {
+            const errData = await response.json();
+            alert("Registration failed: " + errData.error);
+        }
+    } catch (error) {
+        alert("Error connecting to live server!");
+        console.error(error);
+    }
 });
 
 document.getElementById('logout-btn').addEventListener('click', () => { currentUser = null; toggleLayouts(false); });
@@ -206,35 +243,45 @@ document.getElementById('freeze-toggle').addEventListener('change', (e) => {
 });
 
 // --- Transfer ---
-document.getElementById('transfer-form').addEventListener('submit', (e) => {
+document.getElementById('transfer-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payee = document.getElementById('transfer-payee').value.trim();
     const amount = parseFloat(document.getElementById('transfer-amount').value);
     const remarks = document.getElementById('transfer-remarks').value || 'Fund Transfer';
     const pin = document.getElementById('transfer-pin').value;
 
-    if (payee === currentUser.accountNo || amount > currentUser.balance || !pin.match(/^\d{4,6}$/)) {
-        alert("Transfer failed. Check balance, payee, or PIN.");
-        return;
-    }
-
-    currentUser.balance -= amount;
-    currentUser.transactions.unshift({
-        date: new Date().toISOString(), ref: generateRef(), type: 'Debit',
-        amount: amount, closingBalance: currentUser.balance, desc: `To Acc: ${payee} - ${remarks}`
-    });
-
-    if (mockUsers[payee]) {
-        mockUsers[payee].balance += amount;
-        mockUsers[payee].transactions.unshift({
-            date: new Date().toISOString(), ref: generateRef(), type: 'Credit',
-            amount: amount, closingBalance: mockUsers[payee].balance, desc: `From Acc: ${currentUser.accountNo} - ${remarks}`
+    try {
+        const response = await fetch('https://banksystem-rtrs.onrender.com/api/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fromAccount: currentUser.accountNo,
+                toAccount: payee,
+                amount: amount,
+                pin: pin
+            })
         });
-    }
 
-    showToast(`Successfully transferred ${formatCurrency(amount)} to ${payee}.`);
-    document.getElementById('transfer-form').reset();
-    updateDashboard();
+        if (response.ok) {
+            const data = await response.json();
+            currentUser.balance = data.newBalance; // Update local balance
+            
+            currentUser.transactions.unshift({
+                date: new Date().toISOString(), ref: generateRef(), type: 'Debit',
+                amount: amount, closingBalance: currentUser.balance, desc: `To Acc: ${payee} - ${remarks}`
+            });
+
+            showToast(`Successfully transferred ${formatCurrency(amount)} to ${payee}.`);
+            document.getElementById('transfer-form').reset();
+            updateDashboard();
+        } else {
+            const errData = await response.json();
+            alert("Transfer failed: " + (errData.error || "Invalid Details"));
+        }
+    } catch (error) {
+        alert("Error connecting to server!");
+        console.error(error);
+    }
 });
 
 // --- Fixed Deposits (FD) ---
