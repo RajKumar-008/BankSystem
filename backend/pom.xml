@@ -15,7 +15,7 @@
     <name>rajbank-backend</name>
     <description>Backend for RAJ Banking App</description>
     <properties>
-        <java.version>17</java.version>
+        <java.version>26</java.version>
     </properties>
     <dependencies>
         <!-- Spring Boot Web for REST APIs -->
