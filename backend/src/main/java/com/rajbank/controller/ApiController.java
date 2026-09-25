@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -62,6 +61,10 @@ public class ApiController {
 
         Account sender = senderOpt.get();
         Account receiver = receiverOpt.get();
+
+        if (!sender.getPassword().equals(pin)) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid PIN."));
+        }
 
         if(sender.getBalance() < amount) {
             return ResponseEntity.badRequest().body(Map.of("error", "Insufficient balance."));
