@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.1.5</version>
+        <version>3.3.4</version> <!-- Upgraded to latest stable Spring Boot -->
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.rajbank</groupId>
@@ -15,7 +15,7 @@
     <name>rajbank-backend</name>
     <description>Backend for RAJ Banking App</description>
     <properties>
-        <java.version>26</java.version>
+        <java.version>21</java.version> <!-- Upgraded to stable Java 21 LTS -->
     </properties>
     <dependencies>
         <!-- Spring Boot Web for REST APIs -->
@@ -34,7 +34,7 @@
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- PostgreSQL Driver for Free Cloud Storage (e.g., Supabase, Render DB) -->
+        <!-- PostgreSQL Driver for Free Cloud Storage -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
