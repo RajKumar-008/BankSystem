@@ -217,35 +217,29 @@ public class ApiController {
         return ResponseEntity.ok(loanRepository.findByStatusOrderByAppliedAtDesc("PENDING"));
     }
 
-    @PostMapping("/admin/loans/approve/{id}")
+        @PostMapping("/admin/loans/approve/{id}")
     public ResponseEntity<?> approveLoan(@PathVariable Long id) {
         Optional<Loan> loanOpt = loanRepository.findById(id);
         if (loanOpt.isEmpty())
             return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
 
         Loan loan = loanOpt.get();
-        if (!loan.getStatus().equals("PENDING"))
-            return ResponseEntity.badRequest().body(Map.of("error", "Loan is not pending"));
-
         loan.setStatus("APPROVED");
         loanRepository.save(loan);
 
-        // Disburse loan amount to user
+        // Disburse Funds
         Optional<Account> accOpt = accountRepository.findById(loan.getAccountNumber());
         if (accOpt.isPresent()) {
             Account acc = accOpt.get();
             acc.setBalance(acc.getBalance() + loan.getAmount());
             accountRepository.save(acc);
-
+            
             // Record Disbursal Transaction
             String ref = "LOAN-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            Transaction t = new Transaction(acc.getAccountNumber(), "Credit", loan.getAmount(), acc.getBalance(),
-                    "Loan Disbursal (" + loan.getType() + ")", ref, LocalDateTime.now());
+            Transaction t = new Transaction(acc.getAccountNumber(), "Credit", loan.getAmount(), acc.getBalance(), "Loan Disbursal (" + loan.getType() + ")", ref, LocalDateTime.now());
             transactionRepository.save(t);
-
-            notificationRepository.save(new Notification(acc.getAccountNumber(),
-                    "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was APPROVED! Funds disbursed.",
-                    "SUCCESS"));
+            
+            notificationRepository.save(new Notification(acc.getAccountNumber(), "Your " + loan.getType() + " of Rs." + loan.getAmount() + " was APPROVED! Funds disbursed.", "SUCCESS"));
         }
 
         return ResponseEntity.ok(Map.of("message", "Loan Approved successfully"));
@@ -261,8 +255,7 @@ public class ApiController {
         loan.setStatus("REJECTED");
         loanRepository.save(loan);
 
-        notificationRepository.save(new Notification(loan.getAccountNumber(),
-                "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was REJECTED.", "ALERT"));
+        notificationRepository.save(new Notification(loan.getAccountNumber(), "Your " + loan.getType() + " of Rs." + loan.getAmount() + " was REJECTED.", "ALERT"));
 
         return ResponseEntity.ok(Map.of("message", "Loan Rejected"));
     }
@@ -282,4 +275,5 @@ public class ApiController {
         return ResponseEntity.ok(acc);
     }
 }
+
 
