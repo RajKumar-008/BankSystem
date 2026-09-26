@@ -46,6 +46,8 @@ public class ApiController {
             return ResponseEntity.badRequest().body(Map.of("error", "Account number already exists."));
         }
 
+        // Hash password before saving to database
+        account.setPassword(BCrypt.hashpw(account.getPassword(), BCrypt.gensalt()));
         Account saved = accountRepository.save(account);
 
         // Record Initial Deposit Transaction
@@ -153,7 +155,15 @@ public class ApiController {
         Account sender = senderOpt.get();
         Account receiver = receiverOpt.get();
 
-        if (!sender.getPassword().equals(pin)) {
+        // Verify PIN using BCrypt (with legacy plain-text fallback)
+        boolean pinMatch = false;
+        String storedPw = sender.getPassword();
+        if (storedPw.startsWith("$2a$")) {
+            try { pinMatch = BCrypt.checkpw(pin, storedPw); } catch (Exception e) { pinMatch = false; }
+        } else {
+            pinMatch = storedPw.equals(pin);
+        }
+        if (!pinMatch) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid PIN."));
         }
 
