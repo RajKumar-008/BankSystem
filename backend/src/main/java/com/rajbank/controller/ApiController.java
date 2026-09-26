@@ -41,40 +41,43 @@ public class ApiController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Account account) {
-        if(accountRepository.existsById(account.getAccountNumber())) {
+        if (accountRepository.existsById(account.getAccountNumber())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Account number already exists."));
         }
-        
+
         Account saved = accountRepository.save(account);
 
         // Record Initial Deposit Transaction
         if (saved.getBalance() != null && saved.getBalance() > 0) {
             String ref = "RAJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            Transaction t = new Transaction(saved.getAccountNumber(), "Credit", saved.getBalance(), saved.getBalance(), "Initial Deposit", ref, LocalDateTime.now());
+            Transaction t = new Transaction(saved.getAccountNumber(), "Credit", saved.getBalance(), saved.getBalance(),
+                    "Initial Deposit", ref, LocalDateTime.now());
             transactionRepository.save(t);
         }
 
-        notificationRepository.save(new Notification(saved.getAccountNumber(), "Welcome to RAJ Premium Banking!", "INFO"));
+        notificationRepository
+                .save(new Notification(saved.getAccountNumber(), "Welcome to RAJ Premium Banking!", "INFO"));
 
-        return ResponseEntity.ok(Map.of("message", "Account successfully created in database!", "accountNumber", saved.getAccountNumber()));
+        return ResponseEntity.ok(Map.of("message", "Account successfully created in database!", "accountNumber",
+                saved.getAccountNumber()));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
         String loginIdentifier = credentials.get("accountNumber");
         String pass = credentials.get("password");
-        
+
         Optional<Account> accOpt;
         if (loginIdentifier.contains("@")) {
             accOpt = accountRepository.findByEmail(loginIdentifier);
         } else {
             accOpt = accountRepository.findById(loginIdentifier);
         }
-        
-        if(accOpt.isPresent() && accOpt.get().getPassword().equals(pass)) {
+
+        if (accOpt.isPresent() && accOpt.get().getPassword().equals(pass)) {
             return ResponseEntity.ok(accOpt.get());
         }
-        
+
         return ResponseEntity.status(401).body(Map.of("error", "Invalid Account Details or Password"));
     }
 
@@ -92,7 +95,7 @@ public class ApiController {
     @PostMapping("/notifications/read/{id}")
     public ResponseEntity<?> markNotificationRead(@PathVariable Long id) {
         Optional<Notification> notifOpt = notificationRepository.findById(id);
-        if(notifOpt.isPresent()) {
+        if (notifOpt.isPresent()) {
             Notification n = notifOpt.get();
             n.setRead(true);
             notificationRepository.save(n);
@@ -109,13 +112,14 @@ public class ApiController {
     public ResponseEntity<?> createSubAccount(@RequestBody Map<String, String> payload) {
         String parentAcc = payload.get("parentAccountNumber");
         String type = payload.get("accountType"); // Savings, Current
-        
-        String newAccNo = parentAcc + "-" + (int)(Math.random() * 900 + 100);
+
+        String newAccNo = parentAcc + "-" + (int) (Math.random() * 900 + 100);
         SubAccount sa = new SubAccount(newAccNo, parentAcc, type, 0.0);
         subAccountRepository.save(sa);
-        
-        notificationRepository.save(new Notification(parentAcc, "New " + type + " Account (" + newAccNo + ") successfully opened.", "SUCCESS"));
-        
+
+        notificationRepository.save(new Notification(parentAcc,
+                "New " + type + " Account (" + newAccNo + ") successfully opened.", "SUCCESS"));
+
         return ResponseEntity.ok(sa);
     }
 
@@ -124,15 +128,15 @@ public class ApiController {
         String fromAcc = (String) payload.get("fromAccount");
         String toAcc = (String) payload.get("toAccount");
         Double amount = Double.valueOf(payload.get("amount").toString());
-        String pin = (String) payload.get("pin"); 
+        String pin = (String) payload.get("pin");
 
         Optional<Account> senderOpt = accountRepository.findById(fromAcc);
         Optional<Account> receiverOpt = accountRepository.findById(toAcc);
 
-        if(senderOpt.isEmpty()) {
+        if (senderOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Sender account not found."));
         }
-        if(receiverOpt.isEmpty()) {
+        if (receiverOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Receiver account not found in database."));
         }
 
@@ -143,7 +147,7 @@ public class ApiController {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid PIN."));
         }
 
-        if(sender.getBalance() < amount) {
+        if (sender.getBalance() < amount) {
             return ResponseEntity.badRequest().body(Map.of("error", "Insufficient balance."));
         }
 
@@ -156,15 +160,19 @@ public class ApiController {
 
         // Record Transactions
         String ref = "RAJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        
-        Transaction senderTxn = new Transaction(sender.getAccountNumber(), "Debit", amount, sender.getBalance(), "To Acc: " + receiver.getAccountNumber(), ref, LocalDateTime.now());
-        Transaction receiverTxn = new Transaction(receiver.getAccountNumber(), "Credit", amount, receiver.getBalance(), "From Acc: " + sender.getAccountNumber(), ref, LocalDateTime.now());
+
+        Transaction senderTxn = new Transaction(sender.getAccountNumber(), "Debit", amount, sender.getBalance(),
+                "To Acc: " + receiver.getAccountNumber(), ref, LocalDateTime.now());
+        Transaction receiverTxn = new Transaction(receiver.getAccountNumber(), "Credit", amount, receiver.getBalance(),
+                "From Acc: " + sender.getAccountNumber(), ref, LocalDateTime.now());
 
         transactionRepository.save(senderTxn);
         transactionRepository.save(receiverTxn);
 
-        notificationRepository.save(new Notification(sender.getAccountNumber(), "Debit of ₹" + amount + " to Account " + receiver.getAccountNumber(), "ALERT"));
-        notificationRepository.save(new Notification(receiver.getAccountNumber(), "Credit of ₹" + amount + " from Account " + sender.getAccountNumber(), "SUCCESS"));
+        notificationRepository.save(new Notification(sender.getAccountNumber(),
+                "Debit of ₹" + amount + " to Account " + receiver.getAccountNumber(), "ALERT"));
+        notificationRepository.save(new Notification(receiver.getAccountNumber(),
+                "Credit of ₹" + amount + " from Account " + sender.getAccountNumber(), "SUCCESS"));
 
         return ResponseEntity.ok(Map.of("message", "Transfer successful!", "newBalance", sender.getBalance()));
     }
@@ -179,11 +187,12 @@ public class ApiController {
         String type = (String) payload.get("type");
         Double amount = Double.valueOf(payload.get("amount").toString());
         Double emi = amount * 0.05; // 5% flat EMI for demo
-        
+
         Loan loan = new Loan(accountNo, type, amount, emi);
         loanRepository.save(loan);
-        
-        notificationRepository.save(new Notification(accountNo, "Your " + type + " application for ₹" + amount + " is now PENDING approval.", "INFO"));
+
+        notificationRepository.save(new Notification(accountNo,
+                "Your " + type + " application for ₹" + amount + " is now PENDING approval.", "INFO"));
         return ResponseEntity.ok(loan);
     }
 
@@ -211,27 +220,32 @@ public class ApiController {
     @PostMapping("/admin/loans/approve/{id}")
     public ResponseEntity<?> approveLoan(@PathVariable Long id) {
         Optional<Loan> loanOpt = loanRepository.findById(id);
-        if(loanOpt.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
-        
+        if (loanOpt.isEmpty())
+            return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
+
         Loan loan = loanOpt.get();
-        if(!loan.getStatus().equals("PENDING")) return ResponseEntity.badRequest().body(Map.of("error", "Loan is not pending"));
+        if (!loan.getStatus().equals("PENDING"))
+            return ResponseEntity.badRequest().body(Map.of("error", "Loan is not pending"));
 
         loan.setStatus("APPROVED");
         loanRepository.save(loan);
 
         // Disburse loan amount to user
         Optional<Account> accOpt = accountRepository.findById(loan.getAccountNumber());
-        if(accOpt.isPresent()) {
+        if (accOpt.isPresent()) {
             Account acc = accOpt.get();
             acc.setBalance(acc.getBalance() + loan.getAmount());
             accountRepository.save(acc);
-            
+
             // Record Disbursal Transaction
             String ref = "LOAN-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            Transaction t = new Transaction(acc.getAccountNumber(), "Credit", loan.getAmount(), acc.getBalance(), "Loan Disbursal (" + loan.getType() + ")", ref, LocalDateTime.now());
+            Transaction t = new Transaction(acc.getAccountNumber(), "Credit", loan.getAmount(), acc.getBalance(),
+                    "Loan Disbursal (" + loan.getType() + ")", ref, LocalDateTime.now());
             transactionRepository.save(t);
-            
-            notificationRepository.save(new Notification(acc.getAccountNumber(), "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was APPROVED! Funds disbursed.", "SUCCESS"));
+
+            notificationRepository.save(new Notification(acc.getAccountNumber(),
+                    "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was APPROVED! Funds disbursed.",
+                    "SUCCESS"));
         }
 
         return ResponseEntity.ok(Map.of("message", "Loan Approved successfully"));
@@ -240,13 +254,15 @@ public class ApiController {
     @PostMapping("/admin/loans/reject/{id}")
     public ResponseEntity<?> rejectLoan(@PathVariable Long id) {
         Optional<Loan> loanOpt = loanRepository.findById(id);
-        if(loanOpt.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
-        
+        if (loanOpt.isEmpty())
+            return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
+
         Loan loan = loanOpt.get();
         loan.setStatus("REJECTED");
         loanRepository.save(loan);
-        
-        notificationRepository.save(new Notification(loan.getAccountNumber(), "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was REJECTED.", "ALERT"));
+
+        notificationRepository.save(new Notification(loan.getAccountNumber(),
+                "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was REJECTED.", "ALERT"));
 
         return ResponseEntity.ok(Map.of("message", "Loan Rejected"));
     }
