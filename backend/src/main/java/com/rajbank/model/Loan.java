@@ -15,16 +15,18 @@ public class Loan {
     private String type; // "Home Loan", "Personal Loan"
     private Double amount;
     private Double emi;
+    private String reason; // Added reason
     private String status; // "PENDING", "APPROVED", "REJECTED"
     private LocalDateTime appliedAt;
 
     public Loan() {}
 
-    public Loan(String accountNumber, String type, Double amount, Double emi) {
+    public Loan(String accountNumber, String type, Double amount, Double emi, String reason) {
         this.accountNumber = accountNumber;
         this.type = type;
         this.amount = amount;
         this.emi = emi;
+        this.reason = reason;
         this.status = "PENDING";
         this.appliedAt = LocalDateTime.now();
     }
@@ -34,6 +36,7 @@ public class Loan {
     public String getType() { return type; }
     public Double getAmount() { return amount; }
     public Double getEmi() { return emi; }
+    public String getReason() { return reason; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getAppliedAt() { return appliedAt; }

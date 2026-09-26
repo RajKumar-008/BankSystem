@@ -524,19 +524,56 @@ async function loadLoans() {
     } catch (e) { console.error('Failed to load loans', e); }
 }
 
-async function applyLoan(type, amount) {
+document.getElementById('loan-type-select')?.addEventListener('change', (e) => {
+    const customGroup = document.getElementById('loan-custom-type-group');
+    if (e.target.value === 'Custom') {
+        customGroup.classList.remove('hidden');
+    } else {
+        customGroup.classList.add('hidden');
+    }
+});
+
+document.getElementById('loan-apply-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const typeSelect = document.getElementById('loan-type-select').value;
+    const type = typeSelect === 'Custom' ? document.getElementById('loan-custom-type').value.trim() : typeSelect;
+    const amount = document.getElementById('loan-amount').value;
+    const reason = document.getElementById('loan-reason').value.trim();
+
+    if (!type) {
+        alert("Please enter a valid loan type.");
+        return;
+    }
+    
+    // Check loan reason length
+    if (reason.length < 10) {
+        alert("Please provide a valid reason for the loan (minimum 10 characters). Check loan details.");
+        return;
+    }
+
+    const btn = document.querySelector('#loan-apply-form button');
+    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Submitting...";
+    btn.disabled = true;
+
     try {
         const res = await fetch('https://banksystem-rtrs.onrender.com/api/loans/apply', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accountNumber: currentUser.accountNo, type: type, amount: amount })
+            body: JSON.stringify({ accountNumber: currentUser.accountNo, type: type, amount: amount, reason: reason })
         });
         if(res.ok) {
             showToast(`${type} application submitted and is PENDING approval!`);
+            document.getElementById('loan-apply-form').reset();
+            document.getElementById('loan-custom-type-group').classList.add('hidden');
             await loadLoans();
             await loadNotifications();
+        } else {
+            alert("Failed to submit loan.");
         }
     } catch(e) { console.error('Loan apply failed', e); }
-}
+
+    btn.innerHTML = "Submit Application";
+    btn.disabled = false;
+});
 
 function renderLoans() {
     const list = document.getElementById('active-loans-list');
@@ -550,115 +587,22 @@ function renderLoans() {
     currentUser.loans.forEach(loan => {
         let statusColor = loan.status === 'APPROVED' ? 'var(--success)' : (loan.status === 'REJECTED' ? 'var(--danger)' : 'var(--text-muted)');
         list.innerHTML += `
-            <div class="info-box bg-body border mt-2" style="justify-content: space-between;">
-                <div>
-                    <strong style="display:block; color:var(--text-main)">${loan.type}</strong>
-                    <span class="text-muted text-sm">Est. EMI: ${formatCurrency(loan.emi)}/mo</span>
+            <div class="info-box bg-body border mt-2" style="flex-direction: column; align-items: stretch; padding: 1rem;">
+                <div style="display:flex; justify-content: space-between; align-items:center;">
+                    <div>
+                        <strong style="display:block; color:var(--text-main)">${loan.type}</strong>
+                        <span class="text-muted text-sm">Est. EMI: ${formatCurrency(loan.emi)}/mo</span>
+                    </div>
+                    <div class="text-right">
+                        <span style="display:block; font-size:0.8rem; font-weight:bold; color:${statusColor}">${loan.status}</span>
+                        <strong>${formatCurrency(loan.amount)}</strong>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <span style="display:block; font-size:0.8rem; font-weight:bold; color:${statusColor}">${loan.status}</span>
-                    <strong>${formatCurrency(loan.amount)}</strong>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--text-muted);">
+                    <strong>Reason:</strong> ${loan.reason || 'N/A'}
                 </div>
             </div>
         `;
-    });
-}
-
-// --- Full Transactions Ledger ---
-function renderTransactions() {
-    const tbody = document.getElementById('transactions-tbody');
-    tbody.innerHTML = '';
-
-    if (!currentUser || currentUser.transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No transactions found.</td></tr>';
-        return;
-    }
-
-    currentUser.transactions.forEach(txn => {
-        const isCredit = txn.type === 'Credit';
-        const sign = isCredit ? '+' : '-';
-        const amountClass = isCredit ? 'amount-in' : 'amount-out';
-
-        tbody.innerHTML += `
-            <tr>
-                <td>${formatDate(txn.date)}</td>
-                <td><strong>${txn.desc}</strong></td>
-                <td style="font-family: monospace;" class="text-muted">${txn.ref}</td>
-                <td class="text-right ${amountClass}">${sign}${formatCurrency(txn.amount)}</td>
-                <td class="text-right" style="font-weight: 500;">${formatCurrency(txn.closingBalance)}</td>
-            </tr>
-        `;
-    });
-}
-
-// Start
-document.addEventListener('DOMContentLoaded', () => { showView('login-view'); });
-
-// === PROFILE LOGIC ===
-let selectedAvatar = 'default';
-
-document.querySelectorAll('.avatar-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-        document.querySelectorAll('.avatar-option').forEach(o => o.style.borderColor = 'transparent');
-        opt.style.borderColor = 'var(--primary)';
-        selectedAvatar = opt.getAttribute('data-url');
-        
-        const preview = document.getElementById('avatar-preview');
-        if(selectedAvatar === 'default') {
-            preview.innerHTML = "<i class='bx bx-user'></i>";
-        } else {
-            preview.innerHTML = `<img src="${selectedAvatar}" style="width:100%; height:100%; object-fit:cover;">`;
-        }
-    });
-});
-
-document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.querySelector('#profile-form button');
-    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Saving...";
-    btn.disabled = true;
-
-    try {
-        const payload = {
-            accountNumber: currentUser.accountNo,
-            name: document.getElementById('prof-name').value,
-            email: document.getElementById('prof-email').value,
-            avatarUrl: selectedAvatar
-        };
-        const pass = document.getElementById('prof-pass').value;
-        if(pass) payload.password = pass;
-
-        const res = await fetch('https://banksystem-rtrs.onrender.com/api/profile/update', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-
-        if(res.ok) {
-            const data = await res.json();
-            currentUser.name = data.name;
-            currentUser.email = data.email;
-            currentUser.avatarUrl = data.avatarUrl;
-            
-            showToast("Profile successfully updated!");
-            updateHeaderAvatar();
-            document.getElementById('prof-pass').value = '';
-        }
-    } catch(e) { console.error(e); showToast("Failed to update profile"); }
-    
-    btn.innerHTML = "Save Changes";
-    btn.disabled = false;
-});
-
-function updateHeaderAvatar() {
-    document.getElementById('header-name').textContent = currentUser.name.split(' ')[0];
-    const avatarBoxes = document.querySelectorAll('.header-actions .avatar');
-    avatarBoxes.forEach(box => {
-        if(!currentUser.avatarUrl || currentUser.avatarUrl === 'default') {
-            box.innerHTML = "<i class='bx bx-user'></i>";
-        } else {
-            box.innerHTML = `<img src="${currentUser.avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-        }
     });
 }
 
@@ -721,10 +665,13 @@ async function loadAdminLoans() {
         const tbody = document.getElementById('admin-loans-tbody');
         if (!res.ok) return;
         const loans = await res.json();
-        tbody.innerHTML = loans.map(l => `
+                tbody.innerHTML = loans.map(l => `
             <tr>
                 <td>${l.accountNumber}</td>
-                <td>${l.type}</td>
+                <td>
+                    <strong>${l.type}</strong><br>
+                    <small class="text-muted" style="font-size:0.75rem;">${l.reason || 'N/A'}</small>
+                </td>
                 <td>${formatCurrency(l.amount)}</td>
                 <td><span class="badge" style="background:var(--warning);color:#000;">${l.status}</span></td>
                 <td>
@@ -780,4 +727,6 @@ async function loadAdminUsers() {
         `).join('');
     } catch(e) {}
 }
+
+
 

@@ -181,18 +181,18 @@ public class ApiController {
     @Autowired
     private LoanRepository loanRepository;
 
-    @PostMapping("/loans/apply")
+        @PostMapping("/loans/apply")
     public ResponseEntity<?> applyLoan(@RequestBody Map<String, Object> payload) {
         String accountNo = (String) payload.get("accountNumber");
         String type = (String) payload.get("type");
         Double amount = Double.valueOf(payload.get("amount").toString());
+        String reason = (String) payload.getOrDefault("reason", "N/A");
         Double emi = amount * 0.05; // 5% flat EMI for demo
-
-        Loan loan = new Loan(accountNo, type, amount, emi);
+        
+        Loan loan = new Loan(accountNo, type, amount, emi, reason);
         loanRepository.save(loan);
-
-        notificationRepository.save(new Notification(accountNo,
-                "Your " + type + " application for ₹" + amount + " is now PENDING approval.", "INFO"));
+        
+        notificationRepository.save(new Notification(accountNo, "Your " + type + " application for Rs." + amount + " is now PENDING approval.", "INFO"));
         return ResponseEntity.ok(loan);
     }
 
@@ -282,3 +282,4 @@ public class ApiController {
         return ResponseEntity.ok(acc);
     }
 }
+
