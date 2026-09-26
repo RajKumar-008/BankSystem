@@ -752,3 +752,83 @@ async function loadAdminUsers() {
 
 
 
+// --- Added missing updateHeaderAvatar and Profile logic ---
+function updateHeaderAvatar() {
+    const avatarContainer = document.querySelector('.user-profile .avatar');
+    const previewContainer = document.getElementById('avatar-preview');
+    
+    let avatarHtml = <i class='bx bx-user'></i>;
+    if (currentUser && currentUser.avatarUrl && currentUser.avatarUrl !== 'default') {
+        avatarHtml = <img src=" + currentUser.avatarUrl + " style="width:100%; height:100%; object-fit:cover; border-radius:50%;">;
+    }
+    
+    if (avatarContainer) avatarContainer.innerHTML = avatarHtml;
+    if (previewContainer) previewContainer.innerHTML = avatarHtml;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Avatar selection logic
+    document.querySelectorAll('.avatar-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.avatar-option').forEach(opt => opt.style.borderColor = 'transparent');
+            this.style.borderColor = 'var(--blue)';
+            
+            const url = this.getAttribute('data-url');
+            if (currentUser) {
+                currentUser.avatarUrl = url;
+            }
+            updateHeaderAvatar();
+        });
+    });
+
+    // Profile form logic
+    const profileForm = document.getElementById('profile-form');
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = profileForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Saving...";
+            submitBtn.disabled = true;
+
+            const name = document.getElementById('prof-name').value;
+            const email = document.getElementById('prof-email').value;
+            const pass = document.getElementById('prof-pass').value;
+
+            try {
+                const response = await fetch(API_BASE_URL + '/profile/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accountNumber: currentUser.accountNo,
+                        name: name,
+                        email: email,
+                        password: pass,
+                        avatarUrl: currentUser.avatarUrl
+                    })
+                });
+
+                if (response.ok) {
+                    const updatedUser = await response.json();
+                    currentUser.name = updatedUser.name;
+                    currentUser.email = updatedUser.email;
+                    currentUser.avatarUrl = updatedUser.avatarUrl;
+                    
+                    document.getElementById('header-name').textContent = currentUser.name;
+                    updateHeaderAvatar();
+                    
+                    alert('Profile updated successfully!');
+                    document.getElementById('prof-pass').value = '';
+                } else {
+                    const err = await response.json();
+                    alert(err.error || 'Failed to update profile');
+                }
+            } catch (err) {
+                alert('Network error while updating profile');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+});
