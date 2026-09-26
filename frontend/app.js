@@ -757,9 +757,9 @@ function updateHeaderAvatar() {
     const avatarContainer = document.querySelector('.user-profile .avatar');
     const previewContainer = document.getElementById('avatar-preview');
     
-    let avatarHtml = <i class='bx bx-user'></i>;
+    let avatarHtml = `<i class='bx bx-user'></i>`;
     if (currentUser && currentUser.avatarUrl && currentUser.avatarUrl !== 'default') {
-        avatarHtml = <img src=" + currentUser.avatarUrl + " style="width:100%; height:100%; object-fit:cover; border-radius:50%;">;
+        avatarHtml = `<img src="${currentUser.avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
     }
     
     if (avatarContainer) avatarContainer.innerHTML = avatarHtml;
