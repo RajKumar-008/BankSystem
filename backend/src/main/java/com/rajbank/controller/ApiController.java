@@ -170,9 +170,9 @@ public class ApiController {
         transactionRepository.save(receiverTxn);
 
         notificationRepository.save(new Notification(sender.getAccountNumber(),
-                "Debit of ₹" + amount + " to Account " + receiver.getAccountNumber(), "ALERT"));
+                "Debit of Rs." + amount + " to Account " + receiver.getAccountNumber(), "ALERT"));
         notificationRepository.save(new Notification(receiver.getAccountNumber(),
-                "Credit of ₹" + amount + " from Account " + sender.getAccountNumber(), "SUCCESS"));
+                "Credit of Rs." + amount + " from Account " + sender.getAccountNumber(), "SUCCESS"));
 
         return ResponseEntity.ok(Map.of("message", "Transfer successful!", "newBalance", sender.getBalance()));
     }
@@ -275,5 +275,7 @@ public class ApiController {
         return ResponseEntity.ok(acc);
     }
 }
+
+
 
 
