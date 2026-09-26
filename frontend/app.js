@@ -168,7 +168,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 fds: [],
                 loans: [],
                 subAccounts: [],
-                notifications: []
+                notifications: [],
+                avatarUrl: data.avatarUrl
             };
             
             // Load live data
@@ -180,9 +181,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             errorMsg.classList.add('hidden');
             document.getElementById('login-form').reset();
             
-            // Setup Header
-            document.getElementById('header-name').textContent = currentUser.name.split(' ')[0];
+            // Setup Header & Profile
+            updateHeaderAvatar();
             document.getElementById('header-acc').textContent = `Acc: ${currentUser.accountNo}`;
+            
+            document.getElementById('prof-name').value = currentUser.name;
+            document.getElementById('prof-email').value = currentUser.email;
             
             toggleLayouts(true);
         } else {
@@ -589,6 +593,75 @@ function renderTransactions() {
 
 // Start
 document.addEventListener('DOMContentLoaded', () => { showView('login-view'); });
+
+// === PROFILE LOGIC ===
+let selectedAvatar = 'default';
+
+document.querySelectorAll('.avatar-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+        document.querySelectorAll('.avatar-option').forEach(o => o.style.borderColor = 'transparent');
+        opt.style.borderColor = 'var(--primary)';
+        selectedAvatar = opt.getAttribute('data-url');
+        
+        const preview = document.getElementById('avatar-preview');
+        if(selectedAvatar === 'default') {
+            preview.innerHTML = "<i class='bx bx-user'></i>";
+        } else {
+            preview.innerHTML = `<img src="${selectedAvatar}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+    });
+});
+
+document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.querySelector('#profile-form button');
+    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Saving...";
+    btn.disabled = true;
+
+    try {
+        const payload = {
+            accountNumber: currentUser.accountNo,
+            name: document.getElementById('prof-name').value,
+            email: document.getElementById('prof-email').value,
+            avatarUrl: selectedAvatar
+        };
+        const pass = document.getElementById('prof-pass').value;
+        if(pass) payload.password = pass;
+
+        const res = await fetch('https://banksystem-rtrs.onrender.com/api/profile/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) {
+            const data = await res.json();
+            currentUser.name = data.name;
+            currentUser.email = data.email;
+            currentUser.avatarUrl = data.avatarUrl;
+            
+            showToast("Profile successfully updated!");
+            updateHeaderAvatar();
+            document.getElementById('prof-pass').value = '';
+        }
+    } catch(e) { console.error(e); showToast("Failed to update profile"); }
+    
+    btn.innerHTML = "Save Changes";
+    btn.disabled = false;
+});
+
+function updateHeaderAvatar() {
+    document.getElementById('header-name').textContent = currentUser.name.split(' ')[0];
+    const avatarBoxes = document.querySelectorAll('.header-actions .avatar');
+    avatarBoxes.forEach(box => {
+        if(!currentUser.avatarUrl || currentUser.avatarUrl === 'default') {
+            box.innerHTML = "<i class='bx bx-user'></i>";
+        } else {
+            box.innerHTML = `<img src="${currentUser.avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        }
+    });
+}
+
 // === ADMIN PORTAL LOGIC ===
 document.getElementById('admin-login-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -707,3 +780,4 @@ async function loadAdminUsers() {
         `).join('');
     } catch(e) {}
 }
+

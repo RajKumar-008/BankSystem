@@ -266,4 +266,19 @@ public class ApiController {
 
         return ResponseEntity.ok(Map.of("message", "Loan Rejected"));
     }
+    @PostMapping("/profile/update")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> payload) {
+        String accountNo = payload.get("accountNumber");
+        Optional<Account> accOpt = accountRepository.findById(accountNo);
+        if(accOpt.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Account not found"));
+        
+        Account acc = accOpt.get();
+        if(payload.containsKey("name")) acc.setName(payload.get("name"));
+        if(payload.containsKey("email")) acc.setEmail(payload.get("email"));
+        if(payload.containsKey("password") && !payload.get("password").isEmpty()) acc.setPassword(payload.get("password"));
+        if(payload.containsKey("avatarUrl")) acc.setAvatarUrl(payload.get("avatarUrl"));
+        
+        accountRepository.save(acc);
+        return ResponseEntity.ok(acc);
+    }
 }

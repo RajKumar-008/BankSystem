@@ -15,6 +15,7 @@ public class Account {
     private String email;
     private String password;
     private Double balance;
+    private String avatarUrl;
 
     // Default Constructor required by JPA
     public Account() {}
@@ -25,6 +26,7 @@ public class Account {
         this.email = email;
         this.password = password;
         this.balance = balance;
+        this.avatarUrl = "default";
     }
 
     // Getters and Setters
@@ -42,4 +44,7 @@ public class Account {
 
     public Double getBalance() { return balance; }
     public void setBalance(Double balance) { this.balance = balance; }
+    
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 }
