@@ -1,4 +1,4 @@
-const API_BASE_URL = API_BASE_URL + '';
+const API_BASE_URL = 'https://banksystem-jx9l.onrender.com/api';
 /**
  * app.js - RAJ Premium Banking Logic
  */

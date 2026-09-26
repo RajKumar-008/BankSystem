@@ -1,16 +1,25 @@
-# Build stage
+# ===================================================
+# Dockerfile — used by Render (place in project root)
+# Build context: root of repo (backend/ subfolder)
+# ===================================================
+
+# Build stage — use Maven + Java 21 LTS (matches target bytecode in pom.xml)
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copy pom.xml from backend folder
+# Copy Maven Wrapper and pom.xml first to cache dependency layer
+COPY backend/.mvn .mvn
+COPY backend/mvnw .
+COPY backend/mvnw.cmd .
 COPY backend/pom.xml .
-RUN mvn dependency:go-offline
 
-# Copy the rest of the source code from backend and build
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+
+# Copy source and build
 COPY backend/src ./src
-RUN mvn clean package -DskipTests
+RUN ./mvnw clean package -DskipTests -B
 
-# Run stage (Lightweight Production Image)
+# Run stage — lightweight JRE
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar

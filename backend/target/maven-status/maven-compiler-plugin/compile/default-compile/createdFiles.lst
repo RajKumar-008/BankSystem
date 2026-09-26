@@ -1,0 +1,13 @@
+com\rajbank\repository\LoanRepository.class
+com\rajbank\repository\NotificationRepository.class
+com\rajbank\model\Account.class
+com\rajbank\model\Loan.class
+com\rajbank\repository\SubAccountRepository.class
+com\rajbank\repository\AccountRepository.class
+com\rajbank\controller\ApiController.class
+com\rajbank\model\Transaction.class
+com\rajbank\model\SubAccount.class
+com\rajbank\model\Notification.class
+com\rajbank\RajBankApplication$1.class
+com\rajbank\RajBankApplication.class
+com\rajbank\repository\TransactionRepository.class
