@@ -1,16 +1,21 @@
 package com.rajbank.controller;
 
 import com.rajbank.model.Account;
+import com.rajbank.model.Transaction;
 import com.rajbank.repository.AccountRepository;
+import com.rajbank.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
-@CrossOrigin(origins = "*") // Allows the Vercel frontend to access the API without being blocked by browser CORS
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api")
 @SuppressWarnings("null")
@@ -19,20 +24,30 @@ public class ApiController {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private TransactionRepository transactionRepository;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Account account) {
         if(accountRepository.existsById(account.getAccountNumber())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Account number already exists."));
         }
         
-        // Save to database (Cloud or Local)
         Account saved = accountRepository.save(account);
+
+        // Record Initial Deposit Transaction
+        if (saved.getBalance() != null && saved.getBalance() > 0) {
+            String ref = "RAJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            Transaction t = new Transaction(saved.getAccountNumber(), "Credit", saved.getBalance(), saved.getBalance(), "Initial Deposit", ref, LocalDateTime.now());
+            transactionRepository.save(t);
+        }
+
         return ResponseEntity.ok(Map.of("message", "Account successfully created in database!", "accountNumber", saved.getAccountNumber()));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        String loginIdentifier = credentials.get("accountNumber"); // This will now hold either email or acc no
+        String loginIdentifier = credentials.get("accountNumber");
         String pass = credentials.get("password");
         
         Optional<Account> accOpt;
@@ -43,11 +58,16 @@ public class ApiController {
         }
         
         if(accOpt.isPresent() && accOpt.get().getPassword().equals(pass)) {
-            // Success
             return ResponseEntity.ok(accOpt.get());
         }
         
         return ResponseEntity.status(401).body(Map.of("error", "Invalid Account Details or Password"));
+    }
+
+    @GetMapping("/transactions/{accountNo}")
+    public ResponseEntity<?> getTransactions(@PathVariable String accountNo) {
+        List<Transaction> transactions = transactionRepository.findByAccountNumberOrderByTimestampDesc(accountNo);
+        return ResponseEntity.ok(transactions);
     }
 
     @PostMapping("/transfer")
@@ -55,7 +75,7 @@ public class ApiController {
         String fromAcc = (String) payload.get("fromAccount");
         String toAcc = (String) payload.get("toAccount");
         Double amount = Double.valueOf(payload.get("amount").toString());
-        String pin = (String) payload.get("pin"); // Note: Real apps would verify PIN against DB
+        String pin = (String) payload.get("pin"); 
 
         Optional<Account> senderOpt = accountRepository.findById(fromAcc);
         Optional<Account> receiverOpt = accountRepository.findById(toAcc);
@@ -82,10 +102,18 @@ public class ApiController {
         sender.setBalance(sender.getBalance() - amount);
         receiver.setBalance(receiver.getBalance() + amount);
 
-        // Update Database
         accountRepository.save(sender);
         accountRepository.save(receiver);
 
-        return ResponseEntity.ok(Map.of("message", "Transfer successful via Spring Boot API!", "newBalance", sender.getBalance()));
+        // Record Transactions
+        String ref = "RAJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        
+        Transaction senderTxn = new Transaction(sender.getAccountNumber(), "Debit", amount, sender.getBalance(), "To Acc: " + receiver.getAccountNumber(), ref, LocalDateTime.now());
+        Transaction receiverTxn = new Transaction(receiver.getAccountNumber(), "Credit", amount, receiver.getBalance(), "From Acc: " + sender.getAccountNumber(), ref, LocalDateTime.now());
+
+        transactionRepository.save(senderTxn);
+        transactionRepository.save(receiverTxn);
+
+        return ResponseEntity.ok(Map.of("message", "Transfer successful!", "newBalance", sender.getBalance()));
     }
 }

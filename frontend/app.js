@@ -120,6 +120,25 @@ document.querySelectorAll('input[name="loginType"]').forEach(radio => {
     });
 });
 
+async function loadTransactions() {
+    try {
+        const response = await fetch(`https://banksystem-rtrs.onrender.com/api/transactions/${currentUser.accountNo}`);
+        if (response.ok) {
+            const data = await response.json();
+            currentUser.transactions = data.map(t => ({
+                date: t.timestamp,
+                ref: t.referenceNumber,
+                type: t.type,
+                amount: t.amount,
+                closingBalance: t.closingBalance,
+                desc: t.description
+            }));
+        }
+    } catch (e) {
+        console.error('Failed to fetch transactions', e);
+    }
+}
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('login-username').value.trim();
@@ -149,6 +168,10 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 fds: [],
                 loans: []
             };
+            
+            // Load live transaction history
+            await loadTransactions();
+
             errorMsg.classList.add('hidden');
             document.getElementById('login-form').reset();
             
@@ -293,10 +316,7 @@ document.getElementById('transfer-form').addEventListener('submit', async (e) =>
             const data = await response.json();
             currentUser.balance = data.newBalance; // Update local balance
             
-            currentUser.transactions.unshift({
-                date: new Date().toISOString(), ref: generateRef(), type: 'Debit',
-                amount: amount, closingBalance: currentUser.balance, desc: `To Acc: ${payee} - ${remarks}`
-            });
+            await loadTransactions(); // Fetch new transactions from DB
 
             showToast(`Successfully transferred ${formatCurrency(amount)} to ${payee}.`);
             document.getElementById('transfer-form').reset();
