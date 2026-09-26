@@ -52,6 +52,7 @@
                     </form>
                     <div class="auth-footer">
                         <p>Don't have an account? <a href="#" onclick="switchView('register-view')">Open an account</a></p>
+                        <p style="margin-top: 10px;"><a href="#" onclick="switchView('admin-login-view')" class="text-muted"><i class='bx bx-shield-quarter'></i> Admin Portal</a></p>
                     </div>
                 </div>
             </section>
@@ -99,7 +100,104 @@
                 </div>
             </section>
 
+            <!-- Admin Login View -->
+            <section id="admin-login-view" class="view hidden">
+                <div class="auth-card">
+                    <div class="brand-logo-large">
+                        <div class="logo-box" style="background-color: var(--danger);">A</div>
+                        <h2>Admin Portal</h2>
+                    </div>
+                    <p class="auth-subtitle">Secure Staff Access</p>
+                    <form id="admin-login-form">
+                        <div class="form-group">
+                            <label>Admin Username</label>
+                            <input type="text" id="admin-username" placeholder="admin" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="admin-password" placeholder="admin123" required>
+                        </div>
+                        <button type="submit" class="btn w-100 mt-2 text-white" style="background-color: var(--danger);">Access System</button>
+                    </form>
+                    <div class="auth-footer">
+                        <p><a href="#" onclick="switchView('login-view')"><i class='bx bx-arrow-back'></i> Back to Customer Login</a></p>
+                    </div>
+                </div>
+            </section>
+
         </div>
+    </div>
+
+    <!-- === ADMIN LAYOUT === -->
+    <div id="admin-layout" class="layout hidden">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo-box-small" style="background:var(--danger);">A</div><span>RAJ Admin</span>
+            </div>
+            <ul class="side-menu">
+                <li class="active" data-target="admin-loans-view"><i class='bx bx-briefcase'></i><span>Pending Loans</span></li>
+                <li data-target="admin-txns-view"><i class='bx bx-list-ul'></i><span>All Transactions</span></li>
+                <li data-target="admin-users-view"><i class='bx bx-group'></i><span>Manage Users</span></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="btn-logout" onclick="logoutAdmin()"><i class='bx bx-log-out'></i><span>Exit Admin</span></button>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <header class="top-header">
+                <div></div>
+                <div class="header-actions">
+                    <div class="user-profile">
+                        <div class="user-info">
+                            <span class="user-name">System Administrator</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <section id="admin-loans-view" class="main-view active" style="padding: 3rem; max-width: 1200px; width: 100%; margin: 0 auto;">
+                <div class="view-title flex-header">
+                    <div>
+                        <h1>Loan Approvals</h1>
+                        <p>Review and approve pending loan applications.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="loadAdminLoans()"><i class='bx bx-refresh'></i> Refresh</button>
+                </div>
+                <div class="panel">
+                    <table class="clean-table full-table">
+                        <thead><tr><th>User Acc</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody id="admin-loans-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <section id="admin-txns-view" class="main-view hidden" style="padding: 3rem; max-width: 1200px; width: 100%; margin: 0 auto;">
+                <div class="view-title flex-header">
+                    <div><h1>System Transactions</h1><p>Global ledger view.</p></div>
+                    <button class="btn btn-outline" onclick="loadAdminTxns()"><i class='bx bx-refresh'></i> Refresh</button>
+                </div>
+                <div class="panel">
+                    <table class="clean-table full-table">
+                        <thead><tr><th>Acc</th><th>Type</th><th>Amount</th><th>Reference</th><th>Date</th></tr></thead>
+                        <tbody id="admin-txns-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="admin-users-view" class="main-view hidden" style="padding: 3rem; max-width: 1200px; width: 100%; margin: 0 auto;">
+                <div class="view-title flex-header">
+                    <div><h1>Manage Users</h1><p>Active user accounts in system.</p></div>
+                    <button class="btn btn-outline" onclick="loadAdminUsers()"><i class='bx bx-refresh'></i> Refresh</button>
+                </div>
+                <div class="panel">
+                    <table class="clean-table full-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Account No</th><th>Balance</th></tr></thead>
+                        <tbody id="admin-users-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
     </div>
 
     <!-- === DASHBOARD LAYOUT === -->

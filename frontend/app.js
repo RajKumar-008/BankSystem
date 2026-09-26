@@ -175,6 +175,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             await loadTransactions();
             await loadSubAccounts();
             await loadNotifications();
+            await loadLoans();
 
             errorMsg.classList.add('hidden');
             document.getElementById('login-form').reset();
@@ -509,10 +510,28 @@ function renderFDs() {
 }
 
 // --- Loans ---
-function applyLoan(type, amount) {
-    currentUser.loans.push({ type, amount, status: 'Active', emi: amount * 0.05 });
-    showToast(`${type} of ${formatCurrency(amount)} approved and active!`);
-    renderLoans();
+async function loadLoans() {
+    try {
+        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/loans/${currentUser.accountNo}`);
+        if(res.ok) {
+            currentUser.loans = await res.json();
+            renderLoans();
+        }
+    } catch (e) { console.error('Failed to load loans', e); }
+}
+
+async function applyLoan(type, amount) {
+    try {
+        const res = await fetch('https://banksystem-rtrs.onrender.com/api/loans/apply', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountNumber: currentUser.accountNo, type: type, amount: amount })
+        });
+        if(res.ok) {
+            showToast(`${type} application submitted and is PENDING approval!`);
+            await loadLoans();
+            await loadNotifications();
+        }
+    } catch(e) { console.error('Loan apply failed', e); }
 }
 
 function renderLoans() {
@@ -520,11 +539,12 @@ function renderLoans() {
     list.innerHTML = '';
     
     if (currentUser.loans.length === 0) {
-        list.innerHTML = `<div class="empty-state text-center text-muted"><p>You have no active loans.</p></div>`;
+        list.innerHTML = `<div class="empty-state text-center text-muted"><p>You have no loan history.</p></div>`;
         return;
     }
 
     currentUser.loans.forEach(loan => {
+        let statusColor = loan.status === 'APPROVED' ? 'var(--success)' : (loan.status === 'REJECTED' ? 'var(--danger)' : 'var(--text-muted)');
         list.innerHTML += `
             <div class="info-box bg-body border mt-2" style="justify-content: space-between;">
                 <div>
@@ -532,7 +552,7 @@ function renderLoans() {
                     <span class="text-muted text-sm">Est. EMI: ${formatCurrency(loan.emi)}/mo</span>
                 </div>
                 <div class="text-right">
-                    <span class="text-muted text-sm" style="display:block">Principal</span>
+                    <span style="display:block; font-size:0.8rem; font-weight:bold; color:${statusColor}">${loan.status}</span>
                     <strong>${formatCurrency(loan.amount)}</strong>
                 </div>
             </div>
@@ -569,3 +589,117 @@ function renderTransactions() {
 
 // Start
 document.addEventListener('DOMContentLoaded', () => { showView('login-view'); });
+// === ADMIN PORTAL LOGIC ===
+document.getElementById('admin-login-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('admin-username').value.trim();
+    const pass = document.getElementById('admin-password').value;
+    if (id === 'admin' && pass === 'admin123') {
+        document.getElementById('admin-login-form').reset();
+        document.getElementById('auth-layout').classList.add('hidden');
+        document.getElementById('auth-layout').classList.remove('active');
+        document.getElementById('admin-layout').classList.remove('hidden');
+        setTimeout(() => document.getElementById('admin-layout').classList.add('active'), 50);
+        loadAdminLoans();
+    } else {
+        alert('Invalid Admin Credentials');
+    }
+});
+
+function logoutAdmin() {
+    document.getElementById('admin-layout').classList.remove('active');
+    setTimeout(() => {
+        document.getElementById('admin-layout').classList.add('hidden');
+        document.getElementById('auth-layout').classList.remove('hidden');
+        setTimeout(() => document.getElementById('auth-layout').classList.add('active'), 50);
+        switchView('login-view');
+    }, 300);
+}
+
+// Admin Tab Switching
+document.querySelectorAll('#admin-layout .side-menu li').forEach(item => {
+    item.addEventListener('click', () => {
+        document.querySelectorAll('#admin-layout .side-menu li').forEach(l => l.classList.remove('active'));
+        item.classList.add('active');
+        
+        document.querySelectorAll('.admin-view').forEach(view => {
+            view.classList.add('hidden');
+            view.classList.remove('active');
+        });
+        
+        const targetId = item.getAttribute('data-target');
+        const targetView = document.getElementById(targetId);
+        targetView.classList.remove('hidden');
+        setTimeout(() => targetView.classList.add('active'), 10);
+
+        if (targetId === 'admin-loans-view') loadAdminLoans();
+        if (targetId === 'admin-txns-view') loadAdminTxns();
+        if (targetId === 'admin-users-view') loadAdminUsers();
+    });
+});
+
+async function loadAdminLoans() {
+    try {
+        const res = await fetch('https://banksystem-rtrs.onrender.com/api/admin/loans/pending');
+        const tbody = document.getElementById('admin-loans-tbody');
+        if (!res.ok) return;
+        const loans = await res.json();
+        tbody.innerHTML = loans.map(l => \
+            <tr>
+                <td>\</td>
+                <td>\</td>
+                <td>\</td>
+                <td><span class="badge" style="background:var(--warning);color:#000;">\</span></td>
+                <td>
+                    <button class="btn btn-outline-sm text-green" onclick="approveLoan(\)">Approve</button>
+                    <button class="btn btn-outline-sm text-red" onclick="rejectLoan(\)">Reject</button>
+                </td>
+            </tr>
+        \).join('');
+        if(loans.length===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center">No pending loans</td></tr>';
+    } catch(e) {}
+}
+
+async function approveLoan(id) {
+    await fetch(\https://banksystem-rtrs.onrender.com/api/admin/loans/approve/\\, { method: 'POST' });
+    loadAdminLoans();
+}
+async function rejectLoan(id) {
+    await fetch(\https://banksystem-rtrs.onrender.com/api/admin/loans/reject/\\, { method: 'POST' });
+    loadAdminLoans();
+}
+
+async function loadAdminTxns() {
+    try {
+        const res = await fetch('https://banksystem-rtrs.onrender.com/api/admin/transactions');
+        const tbody = document.getElementById('admin-txns-tbody');
+        if(!res.ok) return;
+        const txns = await res.json();
+        tbody.innerHTML = txns.map(t => \
+            <tr>
+                <td>\</td>
+                <td style="color:\">\</td>
+                <td>\</td>
+                <td><small class="text-muted">\</small></td>
+                <td>\</td>
+            </tr>
+        \).join('');
+    } catch(e) {}
+}
+
+async function loadAdminUsers() {
+    try {
+        const res = await fetch('https://banksystem-rtrs.onrender.com/api/admin/users');
+        const tbody = document.getElementById('admin-users-tbody');
+        if(!res.ok) return;
+        const users = await res.json();
+        tbody.innerHTML = users.map(u => \
+            <tr>
+                <td>\</td>
+                <td>\</td>
+                <td><strong>\</strong></td>
+                <td>\</td>
+            </tr>
+        \).join('');
+    } catch(e) {}
+}

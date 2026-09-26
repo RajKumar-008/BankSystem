@@ -166,4 +166,86 @@ public class ApiController {
 
         return ResponseEntity.ok(Map.of("message", "Transfer successful!", "newBalance", sender.getBalance()));
     }
+
+    // --- LOAN ENDPOINTS ---
+    @Autowired
+    private com.rajbank.repository.LoanRepository loanRepository;
+
+    @PostMapping("/loans/apply")
+    public ResponseEntity<?> applyLoan(@RequestBody Map<String, Object> payload) {
+        String accountNo = (String) payload.get("accountNumber");
+        String type = (String) payload.get("type");
+        Double amount = Double.valueOf(payload.get("amount").toString());
+        Double emi = amount * 0.05; // 5% flat EMI for demo
+        
+        Loan loan = new Loan(accountNo, type, amount, emi);
+        loanRepository.save(loan);
+        
+        notificationRepository.save(new Notification(accountNo, "Your " + type + " application for ₹" + amount + " is now PENDING approval.", "INFO"));
+        return ResponseEntity.ok(loan);
+    }
+
+    @GetMapping("/loans/{accountNo}")
+    public ResponseEntity<?> getUserLoans(@PathVariable String accountNo) {
+        return ResponseEntity.ok(loanRepository.findByAccountNumberOrderByAppliedAtDesc(accountNo));
+    }
+
+    // --- ADMIN ENDPOINTS ---
+    @GetMapping("/admin/users")
+    public ResponseEntity<?> getAllUsers() {
+        return ResponseEntity.ok(accountRepository.findAll());
+    }
+
+    @GetMapping("/admin/transactions")
+    public ResponseEntity<?> getAllTransactions() {
+        return ResponseEntity.ok(transactionRepository.findAll());
+    }
+
+    @GetMapping("/admin/loans/pending")
+    public ResponseEntity<?> getPendingLoans() {
+        return ResponseEntity.ok(loanRepository.findByStatusOrderByAppliedAtDesc("PENDING"));
+    }
+
+    @PostMapping("/admin/loans/approve/{id}")
+    public ResponseEntity<?> approveLoan(@PathVariable Long id) {
+        Optional<Loan> loanOpt = loanRepository.findById(id);
+        if(loanOpt.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
+        
+        Loan loan = loanOpt.get();
+        if(!loan.getStatus().equals("PENDING")) return ResponseEntity.badRequest().body(Map.of("error", "Loan is not pending"));
+
+        loan.setStatus("APPROVED");
+        loanRepository.save(loan);
+
+        // Disburse loan amount to user
+        Optional<Account> accOpt = accountRepository.findById(loan.getAccountNumber());
+        if(accOpt.isPresent()) {
+            Account acc = accOpt.get();
+            acc.setBalance(acc.getBalance() + loan.getAmount());
+            accountRepository.save(acc);
+            
+            // Record Disbursal Transaction
+            String ref = "LOAN-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+            Transaction t = new Transaction(acc.getAccountNumber(), "Credit", loan.getAmount(), acc.getBalance(), "Loan Disbursal (" + loan.getType() + ")", ref, LocalDateTime.now());
+            transactionRepository.save(t);
+            
+            notificationRepository.save(new Notification(acc.getAccountNumber(), "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was APPROVED! Funds disbursed.", "SUCCESS"));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Loan Approved successfully"));
+    }
+
+    @PostMapping("/admin/loans/reject/{id}")
+    public ResponseEntity<?> rejectLoan(@PathVariable Long id) {
+        Optional<Loan> loanOpt = loanRepository.findById(id);
+        if(loanOpt.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Loan not found"));
+        
+        Loan loan = loanOpt.get();
+        loan.setStatus("REJECTED");
+        loanRepository.save(loan);
+        
+        notificationRepository.save(new Notification(loan.getAccountNumber(), "Your " + loan.getType() + " of ₹" + loan.getAmount() + " was REJECTED.", "ALERT"));
+
+        return ResponseEntity.ok(Map.of("message", "Loan Rejected"));
+    }
 }
