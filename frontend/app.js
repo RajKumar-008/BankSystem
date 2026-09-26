@@ -622,15 +622,19 @@ document.querySelectorAll('#admin-layout .side-menu li').forEach(item => {
         document.querySelectorAll('#admin-layout .side-menu li').forEach(l => l.classList.remove('active'));
         item.classList.add('active');
         
-        document.querySelectorAll('.admin-view').forEach(view => {
-            view.classList.add('hidden');
-            view.classList.remove('active');
+        document.querySelectorAll('.admin-view, .main-view').forEach(view => {
+            if(view.closest('#admin-layout')) {
+                view.classList.add('hidden');
+                view.classList.remove('active');
+            }
         });
         
         const targetId = item.getAttribute('data-target');
         const targetView = document.getElementById(targetId);
-        targetView.classList.remove('hidden');
-        setTimeout(() => targetView.classList.add('active'), 10);
+        if(targetView) {
+            targetView.classList.remove('hidden');
+            setTimeout(() => targetView.classList.add('active'), 10);
+        }
 
         if (targetId === 'admin-loans-view') loadAdminLoans();
         if (targetId === 'admin-txns-view') loadAdminTxns();
@@ -644,28 +648,28 @@ async function loadAdminLoans() {
         const tbody = document.getElementById('admin-loans-tbody');
         if (!res.ok) return;
         const loans = await res.json();
-        tbody.innerHTML = loans.map(l => \
+        tbody.innerHTML = loans.map(l => `
             <tr>
-                <td>\</td>
-                <td>\</td>
-                <td>\</td>
-                <td><span class="badge" style="background:var(--warning);color:#000;">\</span></td>
+                <td>${l.accountNumber}</td>
+                <td>${l.type}</td>
+                <td>${formatCurrency(l.amount)}</td>
+                <td><span class="badge" style="background:var(--warning);color:#000;">${l.status}</span></td>
                 <td>
-                    <button class="btn btn-outline-sm text-green" onclick="approveLoan(\)">Approve</button>
-                    <button class="btn btn-outline-sm text-red" onclick="rejectLoan(\)">Reject</button>
+                    <button class="btn btn-outline-sm text-green" onclick="approveLoan(${l.id})">Approve</button>
+                    <button class="btn btn-outline-sm text-red" onclick="rejectLoan(${l.id})">Reject</button>
                 </td>
             </tr>
-        \).join('');
+        `).join('');
         if(loans.length===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center">No pending loans</td></tr>';
     } catch(e) {}
 }
 
 async function approveLoan(id) {
-    await fetch(\https://banksystem-rtrs.onrender.com/api/admin/loans/approve/\\, { method: 'POST' });
+    await fetch(`https://banksystem-rtrs.onrender.com/api/admin/loans/approve/${id}`, { method: 'POST' });
     loadAdminLoans();
 }
 async function rejectLoan(id) {
-    await fetch(\https://banksystem-rtrs.onrender.com/api/admin/loans/reject/\\, { method: 'POST' });
+    await fetch(`https://banksystem-rtrs.onrender.com/api/admin/loans/reject/${id}`, { method: 'POST' });
     loadAdminLoans();
 }
 
@@ -675,15 +679,15 @@ async function loadAdminTxns() {
         const tbody = document.getElementById('admin-txns-tbody');
         if(!res.ok) return;
         const txns = await res.json();
-        tbody.innerHTML = txns.map(t => \
+        tbody.innerHTML = txns.map(t => `
             <tr>
-                <td>\</td>
-                <td style="color:\">\</td>
-                <td>\</td>
-                <td><small class="text-muted">\</small></td>
-                <td>\</td>
+                <td>${t.accountNumber}</td>
+                <td style="color:${t.type==='Credit'?'var(--success)':'var(--danger)'}">${t.type}</td>
+                <td>${formatCurrency(t.amount)}</td>
+                <td><small class="text-muted">${t.referenceNumber}</small></td>
+                <td>${formatDate(t.timestamp)}</td>
             </tr>
-        \).join('');
+        `).join('');
     } catch(e) {}
 }
 
@@ -693,13 +697,13 @@ async function loadAdminUsers() {
         const tbody = document.getElementById('admin-users-tbody');
         if(!res.ok) return;
         const users = await res.json();
-        tbody.innerHTML = users.map(u => \
+        tbody.innerHTML = users.map(u => `
             <tr>
-                <td>\</td>
-                <td>\</td>
-                <td><strong>\</strong></td>
-                <td>\</td>
+                <td>${u.name}</td>
+                <td>${u.email}</td>
+                <td><strong>${u.accountNumber}</strong></td>
+                <td>${formatCurrency(u.balance)}</td>
             </tr>
-        \).join('');
+        `).join('');
     } catch(e) {}
 }
