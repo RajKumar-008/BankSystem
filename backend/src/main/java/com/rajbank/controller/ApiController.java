@@ -171,7 +171,7 @@ public class ApiController {
 
     // --- LOAN ENDPOINTS ---
     @Autowired
-    private com.rajbank.repository.LoanRepository loanRepository;
+    private LoanRepository loanRepository;
 
     @PostMapping("/loans/apply")
     public ResponseEntity<?> applyLoan(@RequestBody Map<String, Object> payload) {
