@@ -1,3 +1,4 @@
+const API_BASE_URL = API_BASE_URL + '';
 /**
  * app.js - RAJ Premium Banking Logic
  */
@@ -122,7 +123,7 @@ document.querySelectorAll('input[name="loginType"]').forEach(radio => {
 
 async function loadTransactions() {
     try {
-        const response = await fetch(`https://banksystem-rtrs.onrender.com/api/transactions/${currentUser.accountNo}`);
+        const response = await fetch(`${API_BASE_URL}/transactions/${currentUser.accountNo}`);
         if (response.ok) {
             const data = await response.json();
             currentUser.transactions = data.map(t => ({
@@ -148,13 +149,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
     submitBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Authenticating...";
     submitBtn.disabled = true;
+    errorMsg.classList.add('hidden');
 
     try {
-        const response = await fetch('https://banksystem-rtrs.onrender.com/api/login', {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+        const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accountNumber: username, password: password })
+            body: JSON.stringify({ accountNumber: username, password: password }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         if (response.ok) {
             const data = await response.json();
@@ -178,7 +186,6 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             await loadNotifications();
             await loadLoans();
 
-            errorMsg.classList.add('hidden');
             document.getElementById('login-form').reset();
             
             // Setup Header & Profile
@@ -189,12 +196,25 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             document.getElementById('prof-email').value = currentUser.email;
             
             toggleLayouts(true);
-        } else {
+        } else if (response.status === 401) {
+            errorMsg.textContent = "Invalid Account Details or Password";
             errorMsg.classList.remove('hidden');
+        } else if (response.status === 500 || response.status === 502 || response.status === 503) {
+            alert(`Backend Error (${response.status}): The server encountered an error or is currently restarting. Please try again in a few minutes.`);
+        } else if (response.status === 404) {
+            alert("API Not Found (404). This usually means the backend server is offline or failed to deploy.");
+        } else {
+            alert(`Unexpected HTTP Error: ${response.status}`);
         }
     } catch (error) {
-        alert("Error connecting to live server!");
-        console.error(error);
+        if (error.name === 'AbortError') {
+            alert("Network Timeout: The backend took too long to respond. It might be waking up from sleep on Render.");
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            alert("Network/CORS Error: Could not reach the live server. The backend might be completely down, or CORS is blocking the request.");
+        } else {
+            alert("Error connecting to live server: " + error.message);
+        }
+        console.error("Login fetch error:", error);
     } finally {
         submitBtn.innerHTML = "Sign In";
         submitBtn.disabled = false;
@@ -204,14 +224,14 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 // --- Feature Loaders ---
 async function loadSubAccounts() {
     try {
-        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/subaccounts/${currentUser.accountNo}`);
+        const res = await fetch(`${API_BASE_URL}/subaccounts/${currentUser.accountNo}`);
         if(res.ok) currentUser.subAccounts = await res.json();
     } catch (e) { console.error('Subaccount load failed', e); }
 }
 
 async function loadNotifications() {
     try {
-        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/notifications/${currentUser.accountNo}`);
+        const res = await fetch(`${API_BASE_URL}/notifications/${currentUser.accountNo}`);
         if(res.ok) {
             currentUser.notifications = await res.json();
             renderNotifications();
@@ -259,7 +279,7 @@ function renderNotifications() {
 }
 
 async function markNotifRead(id) {
-    await fetch(`https://banksystem-rtrs.onrender.com/api/notifications/read/${id}`, { method: 'POST' });
+    await fetch(`${API_BASE_URL}/notifications/read/${id}`, { method: 'POST' });
     await loadNotifications();
 }
 
@@ -268,7 +288,7 @@ async function createNewSubAccount() {
     if(!type) return;
     
     try {
-        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/subaccounts/create`, {
+        const res = await fetch(`${API_BASE_URL}/subaccounts/create`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ parentAccountNumber: currentUser.accountNo, accountType: type })
         });
@@ -296,7 +316,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     const newAccountNo = (Math.floor(Math.random() * 9000) + 1000).toString(); // Generate 4-digit ID
 
     try {
-        const response = await fetch('https://banksystem-rtrs.onrender.com/api/register', {
+        const response = await fetch(API_BASE_URL + '/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -423,7 +443,7 @@ document.getElementById('transfer-form').addEventListener('submit', async (e) =>
     submitBtn.disabled = true;
 
     try {
-        const response = await fetch('https://banksystem-rtrs.onrender.com/api/transfer', {
+        const response = await fetch(API_BASE_URL + '/transfer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -516,7 +536,7 @@ function renderFDs() {
 // --- Loans ---
 async function loadLoans() {
     try {
-        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/loans/${currentUser.accountNo}`);
+        const res = await fetch(`${API_BASE_URL}/loans/${currentUser.accountNo}`);
         if(res.ok) {
             currentUser.loans = await res.json();
             renderLoans();
@@ -556,7 +576,7 @@ document.getElementById('loan-apply-form')?.addEventListener('submit', async (e)
     btn.disabled = true;
 
     try {
-        const res = await fetch('https://banksystem-rtrs.onrender.com/api/loans/apply', {
+        const res = await fetch(API_BASE_URL + '/loans/apply', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accountNumber: currentUser.accountNo, type: type, amount: amount, reason: reason })
         });
@@ -661,7 +681,7 @@ document.querySelectorAll('#admin-layout .side-menu li').forEach(item => {
 
 async function loadAdminLoans() {
     try {
-        const res = await fetch('https://banksystem-rtrs.onrender.com/api/admin/loans/pending');
+        const res = await fetch(API_BASE_URL + '/admin/loans/pending');
         const tbody = document.getElementById('admin-loans-tbody');
         if (!res.ok) return;
         const loans = await res.json();
@@ -685,17 +705,17 @@ async function loadAdminLoans() {
 }
 
 async function approveLoan(id) {
-    await fetch(`https://banksystem-rtrs.onrender.com/api/admin/loans/approve/${id}`, { method: 'POST' });
+    await fetch(`${API_BASE_URL}/admin/loans/approve/${id}`, { method: 'POST' });
     loadAdminLoans();
 }
 async function rejectLoan(id) {
-    await fetch(`https://banksystem-rtrs.onrender.com/api/admin/loans/reject/${id}`, { method: 'POST' });
+    await fetch(`${API_BASE_URL}/admin/loans/reject/${id}`, { method: 'POST' });
     loadAdminLoans();
 }
 
 async function loadAdminTxns() {
     try {
-        const res = await fetch('https://banksystem-rtrs.onrender.com/api/admin/transactions');
+        const res = await fetch(API_BASE_URL + '/admin/transactions');
         const tbody = document.getElementById('admin-txns-tbody');
         if(!res.ok) return;
         const txns = await res.json();
@@ -713,7 +733,7 @@ async function loadAdminTxns() {
 
 async function loadAdminUsers() {
     try {
-        const res = await fetch('https://banksystem-rtrs.onrender.com/api/admin/users');
+        const res = await fetch(API_BASE_URL + '/admin/users');
         const tbody = document.getElementById('admin-users-tbody');
         if(!res.ok) return;
         const users = await res.json();
@@ -727,6 +747,7 @@ async function loadAdminUsers() {
         `).join('');
     } catch(e) {}
 }
+
 
 
 
