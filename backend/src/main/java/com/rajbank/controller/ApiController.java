@@ -84,7 +84,8 @@ public class ApiController {
                 isMatch = stored.equals(pass); // Fallback for legacy plain-text accounts
             }
             if (isMatch) {
-            return ResponseEntity.ok(accOpt.get());
+                return ResponseEntity.ok(accOpt.get());
+            }
         }
 
         return ResponseEntity.status(401).body(Map.of("error", "Invalid Account Details or Password"));
@@ -284,6 +285,7 @@ public class ApiController {
         return ResponseEntity.ok(acc);
     }
 }
+
 
 
 
