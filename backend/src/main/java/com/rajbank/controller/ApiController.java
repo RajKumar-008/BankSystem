@@ -2,8 +2,12 @@ package com.rajbank.controller;
 
 import com.rajbank.model.Account;
 import com.rajbank.model.Transaction;
+import com.rajbank.model.Notification;
+import com.rajbank.model.SubAccount;
 import com.rajbank.repository.AccountRepository;
 import com.rajbank.repository.TransactionRepository;
+import com.rajbank.repository.NotificationRepository;
+import com.rajbank.repository.SubAccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +31,12 @@ public class ApiController {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private SubAccountRepository subAccountRepository;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Account account) {
         if(accountRepository.existsById(account.getAccountNumber())) {
@@ -41,6 +51,8 @@ public class ApiController {
             Transaction t = new Transaction(saved.getAccountNumber(), "Credit", saved.getBalance(), saved.getBalance(), "Initial Deposit", ref, LocalDateTime.now());
             transactionRepository.save(t);
         }
+
+        notificationRepository.save(new Notification(saved.getAccountNumber(), "Welcome to RAJ Premium Banking!", "INFO"));
 
         return ResponseEntity.ok(Map.of("message", "Account successfully created in database!", "accountNumber", saved.getAccountNumber()));
     }
@@ -68,6 +80,41 @@ public class ApiController {
     public ResponseEntity<?> getTransactions(@PathVariable String accountNo) {
         List<Transaction> transactions = transactionRepository.findByAccountNumberOrderByTimestampDesc(accountNo);
         return ResponseEntity.ok(transactions);
+    }
+
+    @GetMapping("/notifications/{accountNo}")
+    public ResponseEntity<?> getNotifications(@PathVariable String accountNo) {
+        return ResponseEntity.ok(notificationRepository.findByAccountNumberOrderByTimestampDesc(accountNo));
+    }
+
+    @PostMapping("/notifications/read/{id}")
+    public ResponseEntity<?> markNotificationRead(@PathVariable Long id) {
+        Optional<Notification> notifOpt = notificationRepository.findById(id);
+        if(notifOpt.isPresent()) {
+            Notification n = notifOpt.get();
+            n.setRead(true);
+            notificationRepository.save(n);
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/subaccounts/{accountNo}")
+    public ResponseEntity<?> getSubAccounts(@PathVariable String accountNo) {
+        return ResponseEntity.ok(subAccountRepository.findByParentAccountNumber(accountNo));
+    }
+
+    @PostMapping("/subaccounts/create")
+    public ResponseEntity<?> createSubAccount(@RequestBody Map<String, String> payload) {
+        String parentAcc = payload.get("parentAccountNumber");
+        String type = payload.get("accountType"); // Savings, Current
+        
+        String newAccNo = parentAcc + "-" + (int)(Math.random() * 900 + 100);
+        SubAccount sa = new SubAccount(newAccNo, parentAcc, type, 0.0);
+        subAccountRepository.save(sa);
+        
+        notificationRepository.save(new Notification(parentAcc, "New " + type + " Account (" + newAccNo + ") successfully opened.", "SUCCESS"));
+        
+        return ResponseEntity.ok(sa);
     }
 
     @PostMapping("/transfer")
@@ -113,6 +160,9 @@ public class ApiController {
 
         transactionRepository.save(senderTxn);
         transactionRepository.save(receiverTxn);
+
+        notificationRepository.save(new Notification(sender.getAccountNumber(), "Debit of ₹" + amount + " to Account " + receiver.getAccountNumber(), "ALERT"));
+        notificationRepository.save(new Notification(receiver.getAccountNumber(), "Credit of ₹" + amount + " from Account " + sender.getAccountNumber(), "SUCCESS"));
 
         return ResponseEntity.ok(Map.of("message", "Transfer successful!", "newBalance", sender.getBalance()));
     }

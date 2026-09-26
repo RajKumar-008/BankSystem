@@ -166,11 +166,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 balance: data.balance,
                 transactions: [], 
                 fds: [],
-                loans: []
+                loans: [],
+                subAccounts: [],
+                notifications: []
             };
             
-            // Load live transaction history
+            // Load live data
             await loadTransactions();
+            await loadSubAccounts();
+            await loadNotifications();
 
             errorMsg.classList.add('hidden');
             document.getElementById('login-form').reset();
@@ -191,6 +195,86 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         submitBtn.disabled = false;
     }
 });
+
+// --- Feature Loaders ---
+async function loadSubAccounts() {
+    try {
+        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/subaccounts/${currentUser.accountNo}`);
+        if(res.ok) currentUser.subAccounts = await res.json();
+    } catch (e) { console.error('Subaccount load failed', e); }
+}
+
+async function loadNotifications() {
+    try {
+        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/notifications/${currentUser.accountNo}`);
+        if(res.ok) {
+            currentUser.notifications = await res.json();
+            renderNotifications();
+        }
+    } catch (e) { console.error('Notif load failed', e); }
+}
+
+function toggleNotifications() {
+    const dropdown = document.getElementById('notif-dropdown');
+    dropdown.classList.toggle('hidden');
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    const badge = document.getElementById('notif-badge');
+    const unreadCount = currentUser.notifications.filter(n => !n.read).length;
+    
+    if(unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+
+    list.innerHTML = '';
+    if(currentUser.notifications.length === 0) {
+        list.innerHTML = '<p class="text-muted text-center py-2" style="font-size: 0.85rem;">No notifications yet.</p>';
+        return;
+    }
+
+    currentUser.notifications.forEach(n => {
+        const icon = n.type === 'ALERT' ? 'bx-error text-red bg-red-light' : (n.type === 'SUCCESS' ? 'bx-check text-green bg-success-bg' : 'bx-info-circle text-blue bg-blue-light');
+        const bg = n.read ? '' : 'background: #f0fdf4; border-left: 3px solid var(--success);';
+        
+        list.innerHTML += `
+            <div style="display:flex; gap:10px; padding: 10px; border-radius: 8px; cursor:pointer; ${bg}" onclick="markNotifRead(${n.id})">
+                <div class="${icon}" style="width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;"></div>
+                <div style="font-size: 0.85rem; color: var(--text-main);">
+                    <p style="margin-bottom:2px; font-weight: ${n.read ? 'normal' : 'bold'};">${n.message}</p>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${formatDate(n.timestamp)}</span>
+                </div>
+            </div>
+        `;
+    });
+}
+
+async function markNotifRead(id) {
+    await fetch(`https://banksystem-rtrs.onrender.com/api/notifications/read/${id}`, { method: 'POST' });
+    await loadNotifications();
+}
+
+async function createNewSubAccount() {
+    const type = prompt("Enter Account Type (Savings or Current):", "Savings");
+    if(!type) return;
+    
+    try {
+        const res = await fetch(`https://banksystem-rtrs.onrender.com/api/subaccounts/create`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parentAccountNumber: currentUser.accountNo, accountType: type })
+        });
+        if(res.ok) {
+            showToast(`${type} account successfully created!`);
+            await loadSubAccounts();
+            await loadNotifications();
+            updateDashboard();
+        }
+    } catch(e) { console.error('Subaccount create failed', e); }
+}
 
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -239,8 +323,41 @@ document.getElementById('logout-btn').addEventListener('click', () => { currentU
 // --- Dashboard ---
 function updateDashboard() {
     if (!currentUser) return;
-    document.getElementById('dash-balance').textContent = formatCurrency(currentUser.balance);
+    
+    // Calculate total balance (main + subaccounts)
+    let totalConsolidated = currentUser.balance;
+    if (currentUser.subAccounts) {
+        currentUser.subAccounts.forEach(sa => totalConsolidated += sa.balance);
+    }
+    
+    document.getElementById('dash-balance').textContent = formatCurrency(totalConsolidated);
     renderRecentTransactions();
+    renderSubAccounts();
+}
+
+function renderSubAccounts() {
+    const list = document.getElementById('subaccounts-list');
+    if (!list) return;
+    
+    list.innerHTML = `
+        <div class="info-box bg-body border" style="flex-direction: column; align-items: flex-start; justify-content: center; padding: 1.5rem;">
+            <strong style="color:var(--text-main); font-size:1.1rem;">Main Account</strong>
+            <span class="text-muted" style="margin-bottom:0.5rem; font-family:monospace;">${currentUser.accountNo}</span>
+            <h3 class="text-green">${formatCurrency(currentUser.balance)}</h3>
+        </div>
+    `;
+
+    if(currentUser.subAccounts) {
+        currentUser.subAccounts.forEach(sa => {
+            list.innerHTML += `
+                <div class="info-box bg-body border" style="flex-direction: column; align-items: flex-start; justify-content: center; padding: 1.5rem;">
+                    <strong style="color:var(--text-main); font-size:1.1rem;">${sa.accountType} Account</strong>
+                    <span class="text-muted" style="margin-bottom:0.5rem; font-family:monospace;">${sa.accountNumber}</span>
+                    <h3 class="text-blue">${formatCurrency(sa.balance)}</h3>
+                </div>
+            `;
+        });
+    }
 }
 
 function renderRecentTransactions() {
@@ -317,6 +434,7 @@ document.getElementById('transfer-form').addEventListener('submit', async (e) =>
             currentUser.balance = data.newBalance; // Update local balance
             
             await loadTransactions(); // Fetch new transactions from DB
+            await loadNotifications(); // Fetch new transfer notification
 
             showToast(`Successfully transferred ${formatCurrency(amount)} to ${payee}.`);
             document.getElementById('transfer-form').reset();
