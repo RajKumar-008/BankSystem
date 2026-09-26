@@ -20,8 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.mindrot.jbcrypt.BCrypt;
 
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://banksystem-5p20em4nd-rkrajkumardev-4906.vercel.app", "https://banksystem-blond.vercel.app", "http://localhost:3000"})
 @RestController
 @RequestMapping("/api")
 @SuppressWarnings("null")
@@ -74,7 +75,15 @@ public class ApiController {
             accOpt = accountRepository.findById(loginIdentifier);
         }
 
-        if (accOpt.isPresent() && accOpt.get().getPassword().equals(pass)) {
+        if (accOpt.isPresent()) {
+            boolean isMatch = false;
+            String stored = accOpt.get().getPassword();
+            if (stored.startsWith("$2a$")) {
+                try { isMatch = BCrypt.checkpw(pass, stored); } catch(Exception e) {}
+            } else {
+                isMatch = stored.equals(pass); // Fallback for legacy plain-text accounts
+            }
+            if (isMatch) {
             return ResponseEntity.ok(accOpt.get());
         }
 
@@ -268,13 +277,17 @@ public class ApiController {
         Account acc = accOpt.get();
         if(payload.containsKey("name")) acc.setName(payload.get("name"));
         if(payload.containsKey("email")) acc.setEmail(payload.get("email"));
-        if(payload.containsKey("password") && !payload.get("password").isEmpty()) acc.setPassword(payload.get("password"));
+        if(payload.containsKey("password") && !payload.get("password").isEmpty()) acc.setPassword(BCrypt.hashpw(payload.get("password"), BCrypt.gensalt()));
         if(payload.containsKey("avatarUrl")) acc.setAvatarUrl(payload.get("avatarUrl"));
         
         accountRepository.save(acc);
         return ResponseEntity.ok(acc);
     }
 }
+
+
+
+
 
 
 
