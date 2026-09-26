@@ -13,6 +13,7 @@ import java.util.Optional;
 @CrossOrigin(origins = "*") // Allows the Vercel frontend to access the API without being blocked by browser CORS
 @RestController
 @RequestMapping("/api")
+@SuppressWarnings("null")
 public class ApiController {
 
     @Autowired
