@@ -5,10 +5,12 @@ import com.rajbank.repository.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.Map;
 import java.util.Optional;
 
+@CrossOrigin(origins = "*") // Allows the Vercel frontend to access the API without being blocked by browser CORS
 @RestController
 @RequestMapping("/api")
 public class ApiController {

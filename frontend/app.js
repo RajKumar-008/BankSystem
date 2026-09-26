@@ -125,6 +125,10 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
     const errorMsg = document.getElementById('login-error');
+    const submitBtn = document.querySelector('#login-form button[type="submit"]');
+
+    submitBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Authenticating...";
+    submitBtn.disabled = true;
 
     try {
         const response = await fetch('https://banksystem-rtrs.onrender.com/api/login', {
@@ -159,6 +163,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     } catch (error) {
         alert("Error connecting to live server!");
         console.error(error);
+    } finally {
+        submitBtn.innerHTML = "Sign In";
+        submitBtn.disabled = false;
     }
 });
 
@@ -265,6 +272,10 @@ document.getElementById('transfer-form').addEventListener('submit', async (e) =>
     const amount = parseFloat(document.getElementById('transfer-amount').value);
     const remarks = document.getElementById('transfer-remarks').value || 'Fund Transfer';
     const pin = document.getElementById('transfer-pin').value;
+    const submitBtn = document.querySelector('#transfer-form button[type="submit"]');
+
+    submitBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Processing Transfer...";
+    submitBtn.disabled = true;
 
     try {
         const response = await fetch('https://banksystem-rtrs.onrender.com/api/transfer', {
@@ -297,6 +308,9 @@ document.getElementById('transfer-form').addEventListener('submit', async (e) =>
     } catch (error) {
         alert("Error connecting to server!");
         console.error(error);
+    } finally {
+        submitBtn.innerHTML = "Secure Transfer";
+        submitBtn.disabled = false;
     }
 });
 
